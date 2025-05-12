@@ -25,8 +25,8 @@ import java.util.List;
 @Slf4j
 @PluginDescriptor(
 	name = "GE Filters",
-	description = "Search filters for the Grand Exchange.",
-	tags = {"ge","filter","grand","exchange","search","bank","tag","inventory","setups"},
+	description = "Provides advanced search filters for the Grand Exchange, inventory, and equipment, allowing users to sort and organize items efficiently for market flipping, bank setups, and more.",
+	tags = {"ge","filter","grand","exchange","search","bank","tag","inventory","setups","sort","market","flipping","equipment","items","tool","qol","utility"},
 	enabledByDefault = true
 )
 public class GEFiltersPlugin extends Plugin

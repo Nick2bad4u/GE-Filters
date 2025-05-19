@@ -7,3 +7,10 @@ build
 nbactions.xml
 nb-configuration.xml
 nbproject/
+
+#Ignore vscode AI rules
+.github\copilot-instructions.md
+.clj-kondo/
+.history/
+java/
+.lsp/

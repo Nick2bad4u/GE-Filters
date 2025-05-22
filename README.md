@@ -15,6 +15,10 @@
 
 # GE Filters
 
+<p>
+<img src="https://github.com/user-attachments/assets/3fbed947-cbdc-48ad-9353-aca16a44bea8" align="right">
+</p>
+
 - ➕ Adds a set of filters to the Grand Exchange search interface.
 
 - 👆 Some filters have multiple options which can be accessed by right clicking the filter.

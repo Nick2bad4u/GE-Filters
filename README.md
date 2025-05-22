@@ -70,6 +70,14 @@
     />
 </div>
 
+<div align="left">
+    <img
+      src="https://github.com/Nick2bad4u/GE-Filters/raw/refs/heads/master/assets/all-tabs-example.gif?raw=true"
+      alt="All Tabs Shown Gif"
+      width="75%"
+    />
+</div>
+
 <div align="center">
     <img
       src="https://github.com/Nick2bad4u/Nick2bad4u/blob/main/assets/GitHubProfileLines%20(9).gif?raw=true"

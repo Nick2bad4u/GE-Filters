@@ -1,35 +1,5 @@
 # ⭐ GE Filters - Runelite Plugin Repo
 
-[![ActionLint](https://github.com/Nick2bad4u/GE-Filters/actions/workflows/ActionLint.yml/badge.svg)](https://github.com/Nick2bad4u/GE-Filters/actions/workflows/ActionLint.yml) 🧹
-[![Dependabot Updates](https://github.com/Nick2bad4u/GE-Filters/actions/workflows/dependabot/dependabot-updates/badge.svg)](https://github.com/Nick2bad4u/GE-Filters/actions/workflows/dependabot/dependabot-updates) 🤖
-[![Dependency Review (Nick2bad4u)](https://github.com/Nick2bad4u/GE-Filters/actions/workflows/dependency-review.yml/badge.svg)](https://github.com/Nick2bad4u/GE-Filters/actions/workflows/dependency-review.yml) 🕵️
-[![CodeQL](https://github.com/Nick2bad4u/GE-Filters/actions/workflows/github-code-scanning/codeql/badge.svg)](https://github.com/Nick2bad4u/GE-Filters/actions/workflows/github-code-scanning/codeql) 🔒
-[![Deploy Jekyll with GitHub Pages](https://github.com/Nick2bad4u/GE-Filters/actions/workflows/jekyll-gh-pages.yml/badge.svg)](https://github.com/Nick2bad4u/GE-Filters/actions/workflows/jekyll-gh-pages.yml) 🚀
-[![DevSkim Security Scan](https://github.com/Nick2bad4u/GE-Filters/actions/workflows/devskim.yml/badge.svg)](https://github.com/Nick2bad4u/GE-Filters/actions/workflows/devskim.yml) 🛡️
-[![Generate XML Sitemap](https://github.com/Nick2bad4u/GE-Filters/actions/workflows/sitemap.yml/badge.svg)](https://github.com/Nick2bad4u/GE-Filters/actions/workflows/sitemap.yml) 🗺️
-[![Greetings Workflow](https://github.com/Nick2bad4u/GE-Filters/actions/workflows/greetings.yml/badge.svg)](https://github.com/Nick2bad4u/GE-Filters/actions/workflows/greetings.yml) 👋
-[![Lint Code Base](https://github.com/Nick2bad4u/GE-Filters/actions/workflows/superlinter.yml/badge.svg)](https://github.com/Nick2bad4u/GE-Filters/actions/workflows/superlinter.yml) 📝
-[![Mark Stale Issues & PRs](https://github.com/Nick2bad4u/GE-Filters/actions/workflows/stale.yml/badge.svg)](https://github.com/Nick2bad4u/GE-Filters/actions/workflows/stale.yml) ⏳
-[![Repository Metrics](https://github.com/Nick2bad4u/GE-Filters/actions/workflows/repo-stats.yml/badge.svg)](https://github.com/Nick2bad4u/GE-Filters/actions/workflows/repo-stats.yml) 📊
-[![Scorecard Security Checks](https://github.com/Nick2bad4u/GE-Filters/actions/workflows/scorecards.yml/badge.svg)](https://github.com/Nick2bad4u/GE-Filters/actions/workflows/scorecards.yml) 🏆
-[![Summarize New Issues](https://github.com/Nick2bad4u/GE-Filters/actions/workflows/summary.yml/badge.svg)](https://github.com/Nick2bad4u/GE-Filters/actions/workflows/summary.yml) 📝
-[![TruffleHog Secret Scan](https://github.com/Nick2bad4u/GE-Filters/actions/workflows/trufflehog.yml/badge.svg)](https://github.com/Nick2bad4u/GE-Filters/actions/workflows/trufflehog.yml) 🔑
-![Last commit](https://img.shields.io/github/last-commit/nick2bad4u/ge-filters) 🕓
-![Total Commits](https://img.shields.io/github/commit-activity/t/nick2bad4u/ge-filters) 📈
-![Contribs](https://img.shields.io/github/contributors/nick2bad4u/ge-filters) 👥
-![Languages](https://img.shields.io/github/languages/count/nick2bad4u/ge-filters) 🗣️
-![Branch Status](https://img.shields.io/github/checks-status/nick2bad4u/ge-filters/master) 🌿
-![Issues](https://img.shields.io/github/issues/nick2bad4u/ge-filters) ❗
-![License](https://img.shields.io/github/license/nick2bad4u/ge-filters) 📄
-[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=Nick2bad4u_GE-Filters&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=Nick2bad4u_GE-Filters) 🚦
-[![Bugs](https://sonarcloud.io/api/project_badges/measure?project=Nick2bad4u_GE-Filters&metric=bugs)](https://sonarcloud.io/summary/new_code?id=Nick2bad4u_GE-Filters) 🐞
-[![Code Smells](https://sonarcloud.io/api/project_badges/measure?project=Nick2bad4u_GE-Filters&metric=code_smells)](https://sonarcloud.io/summary/new_code?id=Nick2bad4u_GE-Filters) 💨
-[![Reliability Rating](https://sonarcloud.io/api/project_badges/measure?project=Nick2bad4u_GE-Filters&metric=reliability_rating)](https://sonarcloud.io/summary/new_code?id=Nick2bad4u_GE-Filters) ✅
-[![Security Rating](https://sonarcloud.io/api/project_badges/measure?project=Nick2bad4u_GE-Filters&metric=security_rating)](https://sonarcloud.io/summary/new_code?id=Nick2bad4u_GE-Filters) 🔒
-[![Technical Debt](https://sonarcloud.io/api/project_badges/measure?project=Nick2bad4u_GE-Filters&metric=sqale_index)](https://sonarcloud.io/summary/new_code?id=Nick2bad4u_GE-Filters) 🏗️
-[![Maintainability Rating](https://sonarcloud.io/api/project_badges/measure?project=Nick2bad4u_GE-Filters&metric=sqale_rating)](https://sonarcloud.io/summary/new_code?id=Nick2bad4u_GE-Filters) 🛠️
-[![Vulnerabilities](https://sonarcloud.io/api/project_badges/measure?project=Nick2bad4u_GE-Filters&metric=vulnerabilities)](https://sonarcloud.io/summary/new_code?id=Nick2bad4u_GE-Filters) 🚨
-
 ## 💰 GE Filters Features
 
 <p>
@@ -122,12 +92,58 @@ width="100%"
 
 ## *📈 Repository Statistics*
 
+[![ActionLint](https://github.com/Nick2bad4u/GE-Filters/actions/workflows/ActionLint.yml/badge.svg)](https://github.com/Nick2bad4u/GE-Filters/actions/workflows/ActionLint.yml) 🧹
+[![Dependabot Updates](https://github.com/Nick2bad4u/GE-Filters/actions/workflows/dependabot/dependabot-updates/badge.svg)](https://github.com/Nick2bad4u/GE-Filters/actions/workflows/dependabot/dependabot-updates) 🤖
+[![Dependency Review (Nick2bad4u)](https://github.com/Nick2bad4u/GE-Filters/actions/workflows/dependency-review.yml/badge.svg)](https://github.com/Nick2bad4u/GE-Filters/actions/workflows/dependency-review.yml) 🕵️
+[![CodeQL](https://github.com/Nick2bad4u/GE-Filters/actions/workflows/github-code-scanning/codeql/badge.svg)](https://github.com/Nick2bad4u/GE-Filters/actions/workflows/github-code-scanning/codeql) 🔒
+[![Deploy Jekyll with GitHub Pages](https://github.com/Nick2bad4u/GE-Filters/actions/workflows/jekyll-gh-pages.yml/badge.svg)](https://github.com/Nick2bad4u/GE-Filters/actions/workflows/jekyll-gh-pages.yml) 🚀
+[![DevSkim Security Scan](https://github.com/Nick2bad4u/GE-Filters/actions/workflows/devskim.yml/badge.svg)](https://github.com/Nick2bad4u/GE-Filters/actions/workflows/devskim.yml) 🛡️
+[![Generate XML Sitemap](https://github.com/Nick2bad4u/GE-Filters/actions/workflows/sitemap.yml/badge.svg)](https://github.com/Nick2bad4u/GE-Filters/actions/workflows/sitemap.yml) 🗺️
+[![Greetings Workflow](https://github.com/Nick2bad4u/GE-Filters/actions/workflows/greetings.yml/badge.svg)](https://github.com/Nick2bad4u/GE-Filters/actions/workflows/greetings.yml) 👋
+[![Lint Code Base](https://github.com/Nick2bad4u/GE-Filters/actions/workflows/superlinter.yml/badge.svg)](https://github.com/Nick2bad4u/GE-Filters/actions/workflows/superlinter.yml) 📝
+[![Mark Stale Issues & PRs](https://github.com/Nick2bad4u/GE-Filters/actions/workflows/stale.yml/badge.svg)](https://github.com/Nick2bad4u/GE-Filters/actions/workflows/stale.yml) ⏳
+[![Repository Metrics](https://github.com/Nick2bad4u/GE-Filters/actions/workflows/repo-stats.yml/badge.svg)](https://github.com/Nick2bad4u/GE-Filters/actions/workflows/repo-stats.yml) 📊
+[![Scorecard Security Checks](https://github.com/Nick2bad4u/GE-Filters/actions/workflows/scorecards.yml/badge.svg)](https://github.com/Nick2bad4u/GE-Filters/actions/workflows/scorecards.yml) 🏆
+[![Summarize New Issues](https://github.com/Nick2bad4u/GE-Filters/actions/workflows/summary.yml/badge.svg)](https://github.com/Nick2bad4u/GE-Filters/actions/workflows/summary.yml) 📝
+[![TruffleHog Secret Scan](https://github.com/Nick2bad4u/GE-Filters/actions/workflows/trufflehog.yml/badge.svg)](https://github.com/Nick2bad4u/GE-Filters/actions/workflows/trufflehog.yml) 🔑
+![Last commit](https://img.shields.io/github/last-commit/nick2bad4u/ge-filters) 🕓
+![Total Commits](https://img.shields.io/github/commit-activity/t/nick2bad4u/ge-filters) 📈
+![Contribs](https://img.shields.io/github/contributors/nick2bad4u/ge-filters) 👥
+![Languages](https://img.shields.io/github/languages/count/nick2bad4u/ge-filters) 🗣️
+![Branch Status](https://img.shields.io/github/checks-status/nick2bad4u/ge-filters/master) 🌿
+![Issues](https://img.shields.io/github/issues/nick2bad4u/ge-filters) ❗
+![License](https://img.shields.io/github/license/nick2bad4u/ge-filters) 📄
+[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=Nick2bad4u_GE-Filters&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=Nick2bad4u_GE-Filters) 🚦
+[![Bugs](https://sonarcloud.io/api/project_badges/measure?project=Nick2bad4u_GE-Filters&metric=bugs)](https://sonarcloud.io/summary/new_code?id=Nick2bad4u_GE-Filters) 🐞
+[![Code Smells](https://sonarcloud.io/api/project_badges/measure?project=Nick2bad4u_GE-Filters&metric=code_smells)](https://sonarcloud.io/summary/new_code?id=Nick2bad4u_GE-Filters) 💨
+[![Reliability Rating](https://sonarcloud.io/api/project_badges/measure?project=Nick2bad4u_GE-Filters&metric=reliability_rating)](https://sonarcloud.io/summary/new_code?id=Nick2bad4u_GE-Filters) ✅
+[![Security Rating](https://sonarcloud.io/api/project_badges/measure?project=Nick2bad4u_GE-Filters&metric=security_rating)](https://sonarcloud.io/summary/new_code?id=Nick2bad4u_GE-Filters) 🔒
+[![Technical Debt](https://sonarcloud.io/api/project_badges/measure?project=Nick2bad4u_GE-Filters&metric=sqale_index)](https://sonarcloud.io/summary/new_code?id=Nick2bad4u_GE-Filters) 🏗️
+[![Maintainability Rating](https://sonarcloud.io/api/project_badges/measure?project=Nick2bad4u_GE-Filters&metric=sqale_rating)](https://sonarcloud.io/summary/new_code?id=Nick2bad4u_GE-Filters) 🛠️
+[![Vulnerabilities](https://sonarcloud.io/api/project_badges/measure?project=Nick2bad4u_GE-Filters&metric=vulnerabilities)](https://sonarcloud.io/summary/new_code?id=Nick2bad4u_GE-Filters) 🚨
+
+<div align="center">
+<img
+src="https://github.com/Nick2bad4u/Nick2bad4u/blob/main/assets/GitHubProfileLines%20(5).gif?raw=true"
+alt="Repository Banner Line Animation"
+width="100%"
+/>
+</div>
+
 <!-- The Repobeats Analytics Image provides insights into repository activity and contributions over time. -->
 
 <div align="center">
 <img
 src="https://repobeats.axiom.co/api/embed/a223c9e18d5134bc1b9357357bf3963768f4a03b.svg"
 alt="Repobeats Analytics Image"
+width="100%"
+/>
+</div>
+
+<div align="center">
+<img
+src="https://github.com/Nick2bad4u/Nick2bad4u/blob/main/assets/GitHubProfileLines%20(2).gif?raw=true"
+alt="Repository Banner Line Animation"
 width="100%"
 />
 </div>
@@ -139,6 +155,25 @@ width="100%"
 src="https://github.com/Nick2bad4u/GE-Filters/raw/refs/heads/master/metrics.repository.svg"
 alt="Github Metrics"
 width="100%"
+/>
+</div>
+
+<div align="center">
+<img
+src="https://github.com/Nick2bad4u/Nick2bad4u/blob/main/assets/GitHubProfileLines%20(11).gif?raw=true"
+alt="Repository Banner Line Animation"
+width="100%"
+/>
+</div>
+
+<div align="center">
+<img
+src="https://sonarcloud.io/api/project_badges/quality_gate?project=Nick2bad4u_GE-Filters"
+alt="Quality Gate Status"
+/>
+<img
+src="https://sonarcloud.io/images/project_badges/sonarcloud-dark.svg"
+alt="SonarCloud Status"
 />
 </div>
 
@@ -159,6 +194,3 @@ alt="Repository Banner Line Animation"
 width="100%"
 />
 </div>
-
-[![Quality gate](https://sonarcloud.io/api/project_badges/quality_gate?project=Nick2bad4u_GE-Filters)](https://sonarcloud.io/summary/new_code?id=Nick2bad4u_GE-Filters)
-[![SonarQube Cloud](https://sonarcloud.io/images/project_badges/sonarcloud-dark.svg)](https://sonarcloud.io/summary/new_code?id=Nick2bad4u_GE-Filters)

@@ -12,6 +12,13 @@
 [![Scorecard Security Checks](https://github.com/Nick2bad4u/GE-Filters/actions/workflows/scorecards.yml/badge.svg)](https://github.com/Nick2bad4u/GE-Filters/actions/workflows/scorecards.yml) 🏆
 [![Summarize New Issues](https://github.com/Nick2bad4u/GE-Filters/actions/workflows/summary.yml/badge.svg)](https://github.com/Nick2bad4u/GE-Filters/actions/workflows/summary.yml) 📝
 [![TruffleHog Secret Scan](https://github.com/Nick2bad4u/GE-Filters/actions/workflows/trufflehog.yml/badge.svg)](https://github.com/Nick2bad4u/GE-Filters/actions/workflows/trufflehog.yml) 🔑
+![Last commit](https://img.shields.io/github/last-commit/nick2bad4u/ge-filters)
+![Total Commits](https://img.shields.io/github/commit-activity/t/nick2bad4u/ge-filters)
+![Contribs](https://img.shields.io/github/contributors/nick2bad4u/ge-filters)
+![Languages](https://img.shields.io/github/languages/count/nick2bad4u/ge-filters)
+![Branch Status](https://img.shields.io/github/checks-status/nick2bad4u/ge-filters/master)
+![Issues](https://img.shields.io/github/issues/nick2bad4u/ge-filters)
+![License](https://img.shields.io/github/license/nick2bad4u/ge-filters)
 
 # GE Filters
 

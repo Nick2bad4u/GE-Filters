@@ -19,6 +19,14 @@
 ![Branch Status](https://img.shields.io/github/checks-status/nick2bad4u/ge-filters/master)
 ![Issues](https://img.shields.io/github/issues/nick2bad4u/ge-filters)
 ![License](https://img.shields.io/github/license/nick2bad4u/ge-filters)
+[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=Nick2bad4u_GE-Filters&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=Nick2bad4u_GE-Filters)
+[![Bugs](https://sonarcloud.io/api/project_badges/measure?project=Nick2bad4u_GE-Filters&metric=bugs)](https://sonarcloud.io/summary/new_code?id=Nick2bad4u_GE-Filters)
+[![Code Smells](https://sonarcloud.io/api/project_badges/measure?project=Nick2bad4u_GE-Filters&metric=code_smells)](https://sonarcloud.io/summary/new_code?id=Nick2bad4u_GE-Filters)
+[![Reliability Rating](https://sonarcloud.io/api/project_badges/measure?project=Nick2bad4u_GE-Filters&metric=reliability_rating)](https://sonarcloud.io/summary/new_code?id=Nick2bad4u_GE-Filters)
+[![Security Rating](https://sonarcloud.io/api/project_badges/measure?project=Nick2bad4u_GE-Filters&metric=security_rating)](https://sonarcloud.io/summary/new_code?id=Nick2bad4u_GE-Filters)
+[![Technical Debt](https://sonarcloud.io/api/project_badges/measure?project=Nick2bad4u_GE-Filters&metric=sqale_index)](https://sonarcloud.io/summary/new_code?id=Nick2bad4u_GE-Filters)
+[![Maintainability Rating](https://sonarcloud.io/api/project_badges/measure?project=Nick2bad4u_GE-Filters&metric=sqale_rating)](https://sonarcloud.io/summary/new_code?id=Nick2bad4u_GE-Filters)
+[![Vulnerabilities](https://sonarcloud.io/api/project_badges/measure?project=Nick2bad4u_GE-Filters&metric=vulnerabilities)](https://sonarcloud.io/summary/new_code?id=Nick2bad4u_GE-Filters)
 
 # GE Filters
 
@@ -140,3 +148,6 @@
       width="100%"
     />
 </div>
+
+[![Quality gate](https://sonarcloud.io/api/project_badges/quality_gate?project=Nick2bad4u_GE-Filters)](https://sonarcloud.io/summary/new_code?id=Nick2bad4u_GE-Filters)
+[![SonarQube Cloud](https://sonarcloud.io/images/project_badges/sonarcloud-dark.svg)](https://sonarcloud.io/summary/new_code?id=Nick2bad4u_GE-Filters)

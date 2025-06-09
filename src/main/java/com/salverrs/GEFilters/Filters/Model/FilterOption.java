@@ -10,6 +10,8 @@ public class FilterOption
     private String title;
     private String searchValue;
 
+    private Object data;
+
     public FilterOption(String title, String searchValue)
     {
         this.title = title;

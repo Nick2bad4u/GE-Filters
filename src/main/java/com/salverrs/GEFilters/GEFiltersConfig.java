@@ -15,9 +15,16 @@ public interface GEFiltersConfig extends Config
 	String filtersSection = "filters";
 
 	@ConfigSection(
+			name = "Inventory Setups",
+			description = "Toggle item types from Inventory Setups that will be included in the filter.",
+			position = 2
+	)
+	String inventorySetupsSection = "invsetupsfilter";
+
+	@ConfigSection(
 			name = "Preferences",
 			description = "Grand Exchange search filter preferences.",
-			position = 1
+			position = 3
 	)
 	String preferencesSection = "preferences";
 
@@ -33,12 +40,25 @@ public interface GEFiltersConfig extends Config
 		return true;
 	}
 
+
+	@ConfigItem(
+			keyName = "enableInventorySetupsFilter",
+			name = "Enable Inventory Setups Filter",
+			description = "Filters GE items by inventory setups. Requires the Inventory Setups plugin to be enabled.",
+			section = filtersSection,
+			position = 1
+	)
+	default boolean enableInventorySetupsFilter()
+	{
+		return true;
+	}
+
 	@ConfigItem(
 			keyName = "enableInventoryFilter",
 			name = "Enable Inventory Filter",
 			description = "Filters GE items by inventory/equipped items.",
 			section = filtersSection,
-			position = 1
+			position = 2
 	)
 	default boolean enableInventoryFilter()
 	{
@@ -50,19 +70,74 @@ public interface GEFiltersConfig extends Config
 			name = "Enable Recent Items Filter",
 			description = "Filters GE items by recently viewed or recent buy/sell offers.",
 			section = filtersSection,
-			position = 2
+			position = 3
 	)
 	default boolean enableRecentItemsFilter()
 	{
 		return true;
 	}
 
+
+	@ConfigItem(
+			keyName = "enableInvSetupsEquipment",
+			name = "Equipment",
+			description = "Show equipment items in the Inventory Setups filter.",
+			section = inventorySetupsSection,
+			position = 4
+	)
+	default boolean enableInvSetupsEquipment() { return true; }
+
+	@ConfigItem(
+			keyName = "enableInvSetupsInventory",
+			name = "Inventory",
+			description = "Show inventory items in the Inventory Setups filter.",
+			section = inventorySetupsSection,
+			position = 5
+	)
+	default boolean enableInvSetupsInventory() { return true; }
+
+	@ConfigItem(
+			keyName = "enableInvSetupsRunePouch",
+			name = "Rune Pouch",
+			description = "Show Rune pouch runes in the Inventory Setups filter.",
+			section = inventorySetupsSection,
+			position = 6
+	)
+	default boolean enableInvSetupsRunePouch() { return true; }
+
+	@ConfigItem(
+			keyName = "enableInvSetupsBoltPouch",
+			name = "Bolt Pouch",
+			description = "Show Bolt pouch bolts in the Inventory Setups filter.",
+			section = inventorySetupsSection,
+			position = 7
+	)
+	default boolean enableInvSetupsBoltPouch() { return true; }
+
+	@ConfigItem(
+			keyName = "enableInvSetupsQuiver",
+			name = "Quiver",
+			description = "Show Quiver ammo in the Inventory Setups filter.",
+			section = inventorySetupsSection,
+			position = 8
+	)
+	default boolean enableInvSetupsQuiver() { return true; }
+
+	@ConfigItem(
+			keyName = "enableInvSetupsAdditionalItems",
+			name = "Additional Filtered Items",
+			description = "Show additional filtered items the Inventory Setups filter.",
+			section = inventorySetupsSection,
+			position = 9
+	)
+	default boolean enableInvSetupsAdditionalItems() { return true; }
+
 	@ConfigItem(
 			keyName = "filterTitleColour",
 			name = "Filter Title Colour",
 			description = "The text colour for filter titles.",
 			section = preferencesSection,
-			position = 3
+			position = 10
 	)
 	default Color filterTitleColour()
 	{
@@ -75,9 +150,21 @@ public interface GEFiltersConfig extends Config
 			name = "Typing Overrides Active Filter",
 			description = "When enabled typing will override the currently active filter and perform a regular search.",
 			section = preferencesSection,
-			position = 4
+			position = 11
 	)
 	default boolean keyPressOverridesFilter()
+	{
+		return true;
+	}
+
+	@ConfigItem(
+			keyName = "hideSearchPrefix",
+			name = "Hide Default Search Prefix",
+			description = "Hide 'What would you like to buy?' from GE searches.",
+			section = preferencesSection,
+			position = 12
+	)
+	default boolean hideSearchPrefix()
 	{
 		return true;
 	}
@@ -91,7 +178,7 @@ public interface GEFiltersConfig extends Config
 			name = "Horizontal Spacing",
 			description = "The horizontal space between filter buttons (px).",
 			section = preferencesSection,
-			position = 5
+			position = 13
 	)
 	default int filterHorizontalSpacing()
 	{

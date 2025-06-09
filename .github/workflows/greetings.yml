@@ -1,0 +1,39 @@
+name: Greetings
+
+# Define the events that trigger this workflow
+on:
+  pull_request_target: # Trigger on pull request events targeting the repository
+  issues: # Trigger on issue events
+
+# Define permissions required for the workflow
+permissions:
+  contents: read # Required to fetch repository contents
+
+concurrency:
+  group: greetings-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  greeting:
+    # Specify the runner to use (ubuntu-latest)
+    runs-on: ubuntu-latest
+
+    # Define permissions specific to the job
+    permissions:
+      issues: write # Required to write comments on issues
+      pull-requests: write # Required to write comments on pull requests
+
+    steps:
+      # Step to harden the runner for security purposes
+      - name: Harden Runner
+        uses: step-security/harden-runner@0634a2670c59f64b4a01f0f96f84700a4088b9f0 # v2.12.0
+        with:
+          egress-policy: audit # Set egress policy to audit
+
+      # Step to send a greeting message for issues and pull requests
+      - name: First Interaction
+        uses: actions/first-interaction@34f15e814fe48ac9312ccf29db4e74fa767cbab7 # v1.3.0
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }} # Use the repository token for authentication
+          issue-message: "Greetings, thanks for opening an issue, I'll look when I can." # Message for new issues
+          pr-message: "Greetings, thanks for opening a pull request, I'll look when I can." # Message for new pull requests

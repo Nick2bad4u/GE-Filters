@@ -3,15 +3,11 @@ package com.salverrs.GEFilters;
 import com.google.inject.Provides;
 import javax.inject.Inject;
 
-import com.salverrs.GEFilters.Filters.BankTabSearchFilter;
-import com.salverrs.GEFilters.Filters.SearchFilter;
-import com.salverrs.GEFilters.Filters.InventorySearchFilter;
-import com.salverrs.GEFilters.Filters.RecentItemsSearchFilter;
+import com.salverrs.GEFilters.Filters.*;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.*;
 import net.runelite.api.events.*;
 import net.runelite.api.widgets.Widget;
-import net.runelite.api.widgets.WidgetInfo;
 import net.runelite.client.callback.ClientThread;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.eventbus.EventBus;
@@ -29,8 +25,8 @@ import java.util.List;
 @Slf4j
 @PluginDescriptor(
 	name = "GE Filters",
-	description = "Search filters for the Grand Exchange.",
-	tags = {"ge","filter","grand","exchange","search","bank","tag"},
+	description = "Provides advanced search filters for the Grand Exchange, allowing users to sort and organize items efficiently for market flipping, bank setups, and more.",
+	tags = {"ge","filter","grand","exchange","search","bank","tag","inventory","setups","sort","market","flipping","equipment","items","tool","qol","utility"},
 	enabledByDefault = true
 )
 public class GEFiltersPlugin extends Plugin
@@ -38,7 +34,11 @@ public class GEFiltersPlugin extends Plugin
 	public static final String CONFIG_GROUP = "GE_FILTERS_CONFIG";
 	public static final String CONFIG_GROUP_DATA = "GE_FILTERS_CONFIG_DATA";
 	public static final String BANK_TAGS_COMP_NAME = "Bank Tags";
+	private static final String SEARCH_BUY_PREFIX = "What would you like to buy?";
+	public static final String INVENTORY_SETUPS_COMP_NAME = "Inventory Setups";
+	private static final int WIDGET_ID_CHATBOX_GE_SEARCH_RESULTS = 10616883;
 	private static final int SEARCH_BOX_LOADED_ID = 750;
+	private static final int SEARCH_STRING_APPEND_ID = 222;
 
 	@Inject
 	private Client client;
@@ -52,6 +52,8 @@ public class GEFiltersPlugin extends Plugin
 	private EventBus eventBus;
 	@Inject
 	private BankTabSearchFilter bankTabSearchFilter;
+	@Inject
+	private InventorySetupsSearchFilter inventorySetupsSearchFilter;
 	@Inject
 	private RecentItemsSearchFilter recentItemsSearchFilter;
 	@Inject
@@ -76,10 +78,7 @@ public class GEFiltersPlugin extends Plugin
 	protected void shutDown() throws Exception
 	{
 		log.info("GE Filters stopped!");
-		clientThread.invoke(() ->
-		{
-			stopFilters();
-		});
+		clientThread.invoke(this::stopFilters);
 	}
 
 	@Subscribe
@@ -87,9 +86,22 @@ public class GEFiltersPlugin extends Plugin
 	{
 		if (event.getScriptId() == SEARCH_BOX_LOADED_ID)
 		{
-			clientThread.invoke(() ->
-			{
-				tryStartFilters();
+			clientThread.invoke(this::tryStartFilters);
+		}
+	}
+
+	@Subscribe
+	public void onWidgetLoaded(WidgetLoaded event)
+	{
+		// Replace with the correct group ID for GE search if needed
+		if (config.hideSearchPrefix() && event.getGroupId() == 1062) // 1062 is commonly GE search group
+		{
+			clientThread.invokeLater(() -> {
+				// Replace with the correct WidgetInfo if available in your RuneLite version
+				Widget searchInput = client.getWidget(1062, 44); // 44 is usually the input field index
+				if (searchInput != null && SEARCH_BUY_PREFIX.equals(searchInput.getText())) {
+					searchInput.setText("");
+				}
 			});
 		}
 	}
@@ -112,9 +124,14 @@ public class GEFiltersPlugin extends Plugin
 	{
 		filters = new ArrayList<>();
 
-		if (config.enableBankTagFilter() && isBankTagsPluginEnabled())
+		if (config.enableBankTagFilter() && isPluginEnabled(BANK_TAGS_COMP_NAME))
 		{
 			filters.add(bankTabSearchFilter);
+		}
+
+		if (config.enableInventorySetupsFilter() && isPluginEnabled(INVENTORY_SETUPS_COMP_NAME))
+		{
+			filters.add(inventorySetupsSearchFilter);
 		}
 
 		if (config.enableInventoryFilter())
@@ -176,13 +193,13 @@ public class GEFiltersPlugin extends Plugin
 		}
 	}
 
-	private boolean isBankTagsPluginEnabled()
+	private boolean isPluginEnabled(String pluginName)
 	{
 		final Collection<Plugin> plugins = pluginManager.getPlugins();
 		for (Plugin plugin : plugins)
 		{
 			final String name = plugin.getName();
-			if (name.equals(BANK_TAGS_COMP_NAME))
+			if (name.equals(pluginName))
 			{
 				return pluginManager.isPluginEnabled(plugin);
 			}
@@ -193,7 +210,7 @@ public class GEFiltersPlugin extends Plugin
 
 	private boolean isSearchVisible()
 	{
-		final Widget widget = client.getWidget(WidgetInfo.CHATBOX_GE_SEARCH_RESULTS);
+		final Widget widget = client.getWidget(WIDGET_ID_CHATBOX_GE_SEARCH_RESULTS);
 		return widget != null && !widget.isHidden();
 	}
 

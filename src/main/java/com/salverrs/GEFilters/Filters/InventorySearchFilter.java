@@ -13,17 +13,21 @@ public class InventorySearchFilter extends SearchFilter {
     private static final String TITLE_EQUIPMENT = "Equipped Items";
     private static final String SEARCH_BASE_INVENTORY = "inventory-items";
     private static final String SEARCH_BASE_EQUIPMENT = "equipped-items";
-
     private FilterOption inventoryFilter, equipmentFilter;
 
     @Override
-    protected void onFilterStarted()
+    protected void onFilterInitialising()
     {
         inventoryFilter = new FilterOption(TITLE_INVENTORY, SEARCH_BASE_INVENTORY);
         equipmentFilter = new FilterOption(TITLE_EQUIPMENT, SEARCH_BASE_EQUIPMENT);
 
         setFilterOptions(inventoryFilter, equipmentFilter);
         setIconSprite(SPRITE_ID_MAIN, 0);
+    }
+
+    @Override
+    protected void onFilterStarted()
+    {
     }
 
     @Override

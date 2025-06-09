@@ -33,7 +33,7 @@ public class RecentItemsSearchFilter extends SearchFilter {
     private ArrayList<Short> recentItemIds, recentBuyOffersItemIds, recentSellOffersItemIds;
 
     @Override
-    protected void onFilterStarted()
+    protected void onFilterInitialising()
     {
         loadRecentItems();
         loadRecentBuyOfferItems();
@@ -45,6 +45,14 @@ public class RecentItemsSearchFilter extends SearchFilter {
 
         setFilterOptions(recentlyViewed, recentBuyOffers, recentSellOffers);
         setIconSprite(SPRITE_ID_MAIN, 0);
+    }
+
+    @Override
+    protected void onFilterStarted()
+    {
+        loadRecentItems();
+        loadRecentBuyOfferItems();
+        loadRecentSellOfferItems();
     }
 
     @Override
@@ -91,15 +99,15 @@ public class RecentItemsSearchFilter extends SearchFilter {
         if (!ready)
             return;
 
-        if (event.getIndex() != VarPlayer.CURRENT_GE_ITEM.getId())
+        if (event.getVarpId() != VarPlayer.CURRENT_GE_ITEM)
             return;
 
-        final short recentId = (short)client.getVar(VarPlayer.CURRENT_GE_ITEM);
+        final int recentId = client.getVarpValue(VarPlayer.CURRENT_GE_ITEM);
 
         if (recentId == -1 || recentId == 0)
             return;
 
-        appendToIdList(recentItemIds, recentId);
+        appendToIdList(recentItemIds, (short)recentId);
         saveRecentItems();
     }
 
@@ -121,7 +129,7 @@ public class RecentItemsSearchFilter extends SearchFilter {
 
     private void addItemFilterResults(ArrayList<Short> items)
     {
-        if (items == null || items.size() == 0)
+        if (items == null || items.isEmpty())
             return;
 
         final short[] itemIds = FilterUtility.getPrimitiveShortArray(items);
@@ -170,14 +178,14 @@ public class RecentItemsSearchFilter extends SearchFilter {
     private ArrayList<Short> loadItemIdsFromConfig(String configKey)
     {
         final String itemsJson = configManager.getConfiguration(GEFiltersPlugin.CONFIG_GROUP_DATA, configKey);
-        if (itemsJson == null || itemsJson.equals(""))
+        if (itemsJson == null || itemsJson.isEmpty())
         {
             return new ArrayList<Short>();
         }
         else
         {
             final Short[] recentItems = GSON.fromJson(itemsJson, Short[].class);
-            return new ArrayList(Arrays.asList(recentItems));
+            return new ArrayList<>(Arrays.asList(recentItems));
         }
     }
 

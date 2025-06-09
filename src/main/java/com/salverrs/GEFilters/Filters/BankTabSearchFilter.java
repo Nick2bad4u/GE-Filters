@@ -7,10 +7,7 @@ import com.salverrs.GEFilters.Filters.Model.GeSearchResultWidget;
 import com.salverrs.GEFilters.GEFiltersPlugin;
 import net.runelite.api.*;
 import net.runelite.api.events.*;
-import net.runelite.api.widgets.JavaScriptCallback;
-import net.runelite.api.widgets.Widget;
-import net.runelite.api.widgets.WidgetID;
-import net.runelite.api.widgets.WidgetInfo;
+import net.runelite.api.widgets.*;
 import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.plugins.banktags.BankTagsPlugin;
 import net.runelite.client.util.Text;
@@ -25,21 +22,25 @@ public class BankTabSearchFilter extends SearchFilter {
     private static final int SPRITE_ID_MAIN = SpriteID.MAP_ICON_BANK;
     private static final String TITLE_MAIN = "Bank Tags";
     private static final String SEARCH_BASE_MAIN = "bank-tags";
-    private static final String TAG_TAB_MENU_IDENTIFIER = "tag tab";
+    private static final String TAG_TAB_MENU_IDENTIFIER = "Export tag tab";
     private static final String TAG_EXCEPTION_JSON_KEY = "bank-tags-exceptions";
+    private static final int WIDGET_ID_CHATBOX_GE_SEARCH_RESULTS = 10616883;
     private boolean bankOpen = false;
     private FilterOption bankTabFilter;
     private List<String> tagExceptions = new ArrayList<>();
 
     @Override
+    protected void onFilterInitialising()
+    {
+        bankTabFilter = new FilterOption(TITLE_MAIN, SEARCH_BASE_MAIN);
+        setFilterOptions(bankTabFilter);
+        setIconSprite(SPRITE_ID_MAIN, -1);
+    }
+
+    @Override
     protected void onFilterStarted()
     {
         loadTagExceptions();
-
-        bankTabFilter = new FilterOption(TITLE_MAIN, SEARCH_BASE_MAIN);
-
-        setFilterOptions(bankTabFilter);
-        setIconSprite(SPRITE_ID_MAIN, -1);
     }
 
     @Override
@@ -54,7 +55,7 @@ public class BankTabSearchFilter extends SearchFilter {
     @Subscribe
     public void onWidgetLoaded(WidgetLoaded event)
     {
-        if (event.getGroupId() == WidgetID.BANK_GROUP_ID)
+        if (event.getGroupId() == InterfaceID.BANK)
         {
             bankOpen = true;
         }
@@ -65,12 +66,11 @@ public class BankTabSearchFilter extends SearchFilter {
     {
         super.onWidgetClosed(event);
 
-        if (event.getGroupId() == WidgetID.BANK_GROUP_ID)
+        if (event.getGroupId() == InterfaceID.BANK)
         {
             bankOpen = false;
         }
     }
-
 
     @Subscribe
     protected void onClientTick(ClientTick clientTick)
@@ -81,7 +81,8 @@ public class BankTabSearchFilter extends SearchFilter {
         if (!bankOpen)
             return;
 
-        final List<MenuEntry> entries = new ArrayList<>(Arrays.asList(client.getMenuEntries()));
+        final Menu menu = client.getMenu();
+        final List<MenuEntry> entries = new ArrayList<>(Arrays.asList(menu.getMenuEntries()));
 
         String targetFormatted = null;
         String targetTag = null;
@@ -101,12 +102,12 @@ public class BankTabSearchFilter extends SearchFilter {
             }
         }
 
-        if (!isTagMenu || targetTag == null)
+        if (!isTagMenu)
             return;
 
         if (tagExceptions.contains(targetTag))
         {
-            client.createMenuEntry(-1)
+            menu.createMenuEntry(-1)
                     .setOption("Include on GE Filters")
                     .setTarget(targetFormatted)
                     .setType(MenuAction.RUNELITE)
@@ -114,7 +115,7 @@ public class BankTabSearchFilter extends SearchFilter {
         }
         else
         {
-            client.createMenuEntry(-1)
+            menu.createMenuEntry(-1)
                     .setOption("Exclude from GE Filters")
                     .setTarget(targetFormatted)
                     .setType(MenuAction.RUNELITE)
@@ -133,7 +134,7 @@ public class BankTabSearchFilter extends SearchFilter {
             if (tagExceptions.contains(tag))
                 continue;
 
-            String iconItemId = configManager.getConfiguration(BankTagsPlugin.CONFIG_GROUP, BankTagsPlugin.ICON_SEARCH + tag);
+            String iconItemId = configManager.getConfiguration(BankTagsPlugin.CONFIG_GROUP, BankTagsPlugin.TAG_ICON_PREFIX + tag);
             iconItemId = iconItemId == null ? "" + ItemID.SPADE : iconItemId;
             tagFilters.add(new GeSearch(tag, Short.parseShort(iconItemId)));
         }
@@ -150,7 +151,7 @@ public class BankTabSearchFilter extends SearchFilter {
 
     private void generateBankTabResults(List<GeSearch> filters, List<GeSearchResultWidget> searchResults)
     {
-        if (searchResults.size() == 0)
+        if (searchResults.isEmpty())
             return;
 
         int resultIndex = 0;
@@ -166,7 +167,7 @@ public class BankTabSearchFilter extends SearchFilter {
 
             searchResult.setTitleText(search);
             searchResult.setTooltipText(search);
-            searchResult.setIcon(filter.getIconItemId());
+            searchResult.setItemIcon(filter.getIconItemId());
             searchResult.setOnOpListener((JavaScriptCallback)(e) ->
             {
                 final String title = TITLE_MAIN + " - " + search;
@@ -184,7 +185,7 @@ public class BankTabSearchFilter extends SearchFilter {
     private List<GeSearchResultWidget> getGeSearchResults()
     {
         final List<GeSearchResultWidget> results = new ArrayList<>();
-        final Widget[] geSearchResultWidgets = client.getWidget(WidgetInfo.CHATBOX_GE_SEARCH_RESULTS).getDynamicChildren();
+        final Widget[] geSearchResultWidgets = Objects.requireNonNull(client.getWidget(WIDGET_ID_CHATBOX_GE_SEARCH_RESULTS)).getDynamicChildren();
         final Queue<Widget> widgetQueue = new LinkedList<Widget>();
 
         for (Widget w : geSearchResultWidgets)
@@ -240,25 +241,19 @@ public class BankTabSearchFilter extends SearchFilter {
     private void loadTagExceptions()
     {
         final String tagExceptionsJson = configManager.getConfiguration(GEFiltersPlugin.CONFIG_GROUP_DATA, TAG_EXCEPTION_JSON_KEY);
-        if (tagExceptionsJson == null || tagExceptionsJson.equals(""))
+        if (tagExceptionsJson == null || tagExceptionsJson.isEmpty())
         {
             tagExceptions = new ArrayList<>();
         }
         else
         {
             final String[] tagExc = GSON.fromJson(tagExceptionsJson, String[].class);
-            tagExceptions = new ArrayList(Arrays.asList(tagExc));
+            tagExceptions = new ArrayList<>(Arrays.asList(tagExc));
         }
     }
 
     private short[] getEmptySearchResults(int size)
     {
-        final short[] ids = new short[size];
-        for (int i = 0; i < size; i++)
-        {
-            ids[i] = 0;
-        }
-
-        return ids;
+        return new short[size];
     }
 }

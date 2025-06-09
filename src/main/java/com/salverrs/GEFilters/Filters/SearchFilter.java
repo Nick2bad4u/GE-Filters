@@ -6,9 +6,8 @@ import com.salverrs.GEFilters.Filters.Model.SearchState;
 import com.salverrs.GEFilters.GEFiltersConfig;
 import net.runelite.api.*;
 import net.runelite.api.events.*;
+import net.runelite.api.widgets.InterfaceID;
 import net.runelite.api.widgets.Widget;
-import net.runelite.api.widgets.WidgetID;
-import net.runelite.api.widgets.WidgetInfo;
 import net.runelite.api.widgets.WidgetType;
 import net.runelite.client.callback.ClientThread;
 import net.runelite.client.config.ConfigManager;
@@ -37,6 +36,10 @@ public abstract class SearchFilter
     private static final int KEY_PRESS_SCRIPT_ID = 905;
     private static final int ICON_BG_SIZE_OFFSET = 6;
     private static final int ICON_BG_POS_OFFSET = 3;
+    private static final int WIDGET_ID_CHATBOX_GE_SEARCH_RESULTS = 10616883;
+    private static final int WIDGET_ID_CHATBOX_CONTAINER = 10616870;
+    private static final int WIDGET_ID_CHATBOX_TITLE = 10616874;
+    private static final int WIDGET_ID_CHATBOX_FULL_INPUT = 10616875;
     private boolean qhEnabled;
     private Widget container;
     private Widget iconWidget;
@@ -71,8 +74,11 @@ public abstract class SearchFilter
 
     public void start(int xOffset, int yOffset)
     {
-        if (isSearchHidden())
+        if (isChatInputHidden())
             return;
+
+        if (!ready)
+            onFilterInitialising();
 
         onFilterStarted();
 
@@ -100,7 +106,7 @@ public abstract class SearchFilter
     @Subscribe
     public void onWidgetClosed(WidgetClosed event)
     {
-        if (event.getGroupId() == WidgetID.GRAND_EXCHANGE_GROUP_ID)
+        if (event.getGroupId() == InterfaceID.GRAND_EXCHANGE)
         {
             disableFilter(true);
         }
@@ -131,7 +137,7 @@ public abstract class SearchFilter
         {
             resolveQuestHelperFilterState();
             FilterOption option = filterTitleMap.get(optionClicked);
-            enableFilter(option, false);
+            enableFilter(option, false, true);
         }
 
         client.playSoundEffect(FILTER_TOGGLE_SOUND_ID);
@@ -177,6 +183,9 @@ public abstract class SearchFilter
         if (event.getScriptId() != KEY_PRESS_SCRIPT_ID)
             return;
 
+        if (!isItemSearchInput())
+            return;
+
         final ScriptEvent scriptEvent = event.getScriptEvent();
         final int typedKeyChar = scriptEvent.getTypedKeyChar();
 
@@ -187,6 +196,8 @@ public abstract class SearchFilter
         disableFilter(true);
         searchGE(character, false);
     }
+
+    protected abstract void onFilterInitialising();
 
     protected abstract void onFilterStarted();
 
@@ -293,14 +304,14 @@ public abstract class SearchFilter
 
     protected void setSearchResultsHidden(boolean hidden)
     {
-        final Widget resultsContainer = client.getWidget(WidgetInfo.CHATBOX_GE_SEARCH_RESULTS);
+        final Widget resultsContainer = client.getWidget(WIDGET_ID_CHATBOX_GE_SEARCH_RESULTS);
         if (resultsContainer != null)
         {
             resultsContainer.setHidden(hidden);
         }
     }
 
-    private void enableFilter(FilterOption option, boolean silent)
+    private void enableFilter(FilterOption option, boolean silent, boolean clearData)
     {
         if (!ready)
             return;
@@ -315,6 +326,11 @@ public abstract class SearchFilter
             searchGE(option.getSearchValue());
         }
 
+        if (clearData)
+        {
+            option.setData(null);
+        }
+
         lastOptionActivated = option;
         eventBus.post(new OtherFilterOptionActivated(this, option));
     }
@@ -327,6 +343,8 @@ public abstract class SearchFilter
         filterEnabled = false;
         refreshFilterMenuOptions(false);
         resetPreviousSearchState();
+
+        filterTitleMap.values().forEach(f -> f.setData(null));
 
         clientThread.invokeLater(() -> {
             setWidgetActivationState(false, true);
@@ -346,12 +364,12 @@ public abstract class SearchFilter
         {
             if (hasPreviousSearchState())
             {
-                enableFilter(lastOptionActivated, true);
+                enableFilter(lastOptionActivated, true, false);
                 loadPreviousSearchState();
             }
             else
             {
-                enableFilter(lastOptionActivated, false);
+                enableFilter(lastOptionActivated, false, false);
             }
         }
         else
@@ -446,16 +464,25 @@ public abstract class SearchFilter
         client.runScript(filterArgs);
     }
 
-    private boolean isSearchHidden()
+    private boolean isChatInputHidden()
     {
-        final Widget widget = client.getWidget(WidgetInfo.CHATBOX_CONTAINER);
+        final Widget widget = client.getWidget(WIDGET_ID_CHATBOX_CONTAINER);
         return widget == null || widget.isHidden();
+    }
+
+    private boolean isItemSearchInput() // Search title is hidden on search input but not for quantity inputs
+    {
+        if (isChatInputHidden())
+            return false;
+
+        final Widget title = client.getWidget(WIDGET_ID_CHATBOX_TITLE);
+        return title != null && title.isHidden();
     }
 
     private void createWidgets(int xOffset, int yOffset)
     {
-        container = client.getWidget(WidgetInfo.CHATBOX_CONTAINER);
-        searchBoxWidget = client.getWidget(WidgetInfo.CHATBOX_FULL_INPUT);
+        container = client.getWidget(WIDGET_ID_CHATBOX_CONTAINER);
+        searchBoxWidget = client.getWidget(WIDGET_ID_CHATBOX_FULL_INPUT);
         titleWidget = createTitleWidget();
         backgroundWidget = createGraphicWidget(SpriteID.UNKNOWN_BUTTON_SQUARE_SMALL, ICON_SIZE, ICON_SIZE, xOffset, yOffset);
         iconWidget = createGraphicWidget(
@@ -484,7 +511,7 @@ public abstract class SearchFilter
 
     private Widget createTitleWidget()
     {
-        final Widget chatBoxWidget = client.getWidget(WidgetInfo.CHATBOX_FULL_INPUT);
+        final Widget chatBoxWidget = client.getWidget(WIDGET_ID_CHATBOX_FULL_INPUT);
         final Widget widget = container.createChild(-1, WidgetType.TEXT);
 
         if (chatBoxWidget == null)

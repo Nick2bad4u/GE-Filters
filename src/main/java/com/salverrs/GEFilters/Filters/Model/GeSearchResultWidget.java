@@ -26,7 +26,37 @@ public class GeSearchResultWidget {
         title.setText(text);
     }
 
-    public void setIcon(short itemId)
+    public void setSpriteId(short spriteId)
+    {
+        icon.setType(5);
+        icon.setContentType(0);
+        icon.setItemId(-1);
+        icon.setModelId(-1);
+        icon.setModelType(1);
+
+        icon.setSpriteId(spriteId);
+        icon.revalidate();
+    }
+
+    public void setSpriteOffset(int xOffset, int yOffset)
+    {
+        icon.setOriginalX(icon.getOriginalX() + xOffset);
+        icon.setOriginalY(icon.getOriginalY() + yOffset);
+        icon.revalidate();
+    }
+
+    public void setSpriteSize(int width, int height)
+    {
+        icon.setOriginalWidth(width);
+        icon.setWidthMode(0);
+
+        icon.setOriginalHeight(height);
+        icon.setWidthMode(0);
+
+        icon.revalidate();
+    }
+
+    public void setItemIcon(short itemId)
     {
         icon.setItemId(itemId);
         icon.setSpriteId(itemId);

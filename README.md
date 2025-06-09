@@ -199,15 +199,7 @@ width="100%"
 
 <div align="center">
 <img
-<<<<<<< HEAD
 src="https://github.com/Nick2bad4u/GE-Filters/raw/refs/heads/Repo-stats/metrics.repository.svg"
-=======
-<<<<<<< HEAD
-src="https://github.com/Nick2bad4u/GE-Filters/raw/refs/heads/master/metrics.repository.svg"
-=======
-src="https://github.com/Nick2bad4u/GE-Filters/raw/refs/heads/Repo-stats/metrics.repository.svg"
->>>>>>> f22ed977713141fa427e9a52641ca3c62126ea0c
->>>>>>> 21ab9beae0bd922a6d1823251c318f55d946dcd8
 alt="Github Metrics"
 width="100%"
 />

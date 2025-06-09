@@ -45,5 +45,6 @@
         "trufflesecurity",
         "twemoji",
         "urlset"
-    ]
+    ],
+    "java.compile.nullAnalysis.mode": "automatic"
 }

@@ -7,7 +7,6 @@ on:
 
 jobs:
   metrics:
-    if: github.ref == 'refs/heads/repo-stats'
     runs-on: ubuntu-latest
     concurrency:
       group: repo-stats-${{ github.ref }}

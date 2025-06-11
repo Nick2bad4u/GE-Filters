@@ -199,7 +199,7 @@ width="100%"
 
 <div align="center">
 <img
-src="https://github.com/Nick2bad4u/GE-Filters/raw/refs/heads/Repo-stats/metrics.repository.svg"
+src="https://github.com/Nick2bad4u/GE-Filters/raw/refs/heads/master/metrics.repository.svg"
 alt="Github Metrics"
 width="100%"
 />

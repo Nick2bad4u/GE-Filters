@@ -8,6 +8,7 @@ import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.*;
 import net.runelite.api.events.*;
 import net.runelite.api.widgets.Widget;
+import net.runelite.api.widgets.InterfaceID;
 import net.runelite.client.callback.ClientThread;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.eventbus.EventBus;
@@ -62,6 +63,12 @@ public class GEFiltersPlugin extends Plugin
 	private PluginManager pluginManager;
 
 	private List<SearchFilter> filters;
+	/**
+	 * RuneLite/OSRS has started re-using the GE search chatbox interface in other contexts
+	 * (e.g. the sailing mermaid riddle/puzzle). We only want to show GE Filters when the
+	 * actual Grand Exchange offers interface is open.
+	 */
+	private boolean grandExchangeInterfaceOpen;
 
 	@Override
 	protected void startUp() throws Exception
@@ -91,8 +98,25 @@ public class GEFiltersPlugin extends Plugin
 	}
 
 	@Subscribe
+	public void onGameStateChanged(GameStateChanged event)
+	{
+		// When returning to login screen, any open GE state is invalid.
+		if (event.getGameState() == GameState.LOGIN_SCREEN)
+		{
+			grandExchangeInterfaceOpen = false;
+			clientThread.invoke(this::stopFilters);
+		}
+	}
+
+	@Subscribe
 	public void onWidgetLoaded(WidgetLoaded event)
 	{
+		if (event.getGroupId() == InterfaceID.GRAND_EXCHANGE)
+		{
+			grandExchangeInterfaceOpen = true;
+			clientThread.invoke(this::tryStartFilters);
+		}
+
 		// Replace with the correct group ID for GE search if needed
 		if (config.hideSearchPrefix() && event.getGroupId() == 1062) // 1062 is commonly GE search group
 		{
@@ -103,6 +127,16 @@ public class GEFiltersPlugin extends Plugin
 					searchInput.setText("");
 				}
 			});
+		}
+	}
+
+	@Subscribe
+	public void onWidgetClosed(WidgetClosed event)
+	{
+		if (event.getGroupId() == InterfaceID.GRAND_EXCHANGE)
+		{
+			grandExchangeInterfaceOpen = false;
+			clientThread.invoke(this::stopFilters);
 		}
 	}
 
@@ -169,6 +203,11 @@ public class GEFiltersPlugin extends Plugin
 
 	private void stopFilters()
 	{
+		if (filters == null)
+		{
+			return;
+		}
+
 		for (SearchFilter filter : filters)
 		{
 			filter.stop();
@@ -210,6 +249,11 @@ public class GEFiltersPlugin extends Plugin
 
 	private boolean isSearchVisible()
 	{
+		if (!grandExchangeInterfaceOpen)
+		{
+			return false;
+		}
+
 		final Widget widget = client.getWidget(WIDGET_ID_CHATBOX_GE_SEARCH_RESULTS);
 		return widget != null && !widget.isHidden();
 	}

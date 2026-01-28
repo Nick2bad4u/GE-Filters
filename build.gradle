@@ -3,11 +3,13 @@ plugins {
 }
 
 repositories {
-	mavenLocal()
 	maven {
 		url = 'https://repo.runelite.net'
 	}
 	mavenCentral()
+	// Keep mavenLocal last: Gradle selects the *first* repository that provides module metadata
+	// and will not fall back to later repos for missing classifier artifacts (e.g. LWJGL natives).
+	mavenLocal()
 }
 
 def runeLiteVersion = 'latest.release'
@@ -24,7 +26,7 @@ dependencies {
 }
 
 group = 'com.salverrs.GEFilters'
-version = '1.15'
+version = '1.15.1'
 sourceCompatibility = '1.8'
 
 tasks.withType(JavaCompile) {

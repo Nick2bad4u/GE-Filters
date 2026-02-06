@@ -88,6 +88,15 @@ public interface GEFiltersConfig extends Config
 	default boolean enableInvSetupsEquipment() { return true; }
 
 	@ConfigItem(
+			keyName = "invSetupsAutoSelectActiveSetup",
+			name = "Auto-select active setup",
+			description = "When enabled, GE Filters will automatically use the currently selected Inventory Setup (in the Inventory Setups plugin) instead of showing the setup list.",
+			section = inventorySetupsSection,
+			position = 3
+	)
+	default boolean invSetupsAutoSelectActiveSetup(){ return false; }
+
+	@ConfigItem(
 			keyName = "enableInvSetupsInventory",
 			name = "Inventory",
 			description = "Show inventory items in the Inventory Setups filter.",

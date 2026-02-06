@@ -26,7 +26,7 @@ dependencies {
 }
 
 group = 'com.salverrs.GEFilters'
-version = '1.15.3'
+version = '1.15.4'
 sourceCompatibility = '1.8'
 
 tasks.withType(JavaCompile) {

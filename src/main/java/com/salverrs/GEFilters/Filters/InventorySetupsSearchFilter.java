@@ -23,6 +23,11 @@ import com.salverrs.GEFilters.Filters.Model.InventorySetups.Serialization.*;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.events.ConfigChanged;
+import net.runelite.client.plugins.Plugin;
+import net.runelite.client.plugins.PluginManager;
+import javax.annotation.Nullable;
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 
 public class InventorySetupsSearchFilter extends SearchFilter {
 
@@ -40,6 +45,19 @@ public class InventorySetupsSearchFilter extends SearchFilter {
     private Gson gson;
     private List<InventorySetup> inventorySetups = new ArrayList<>();
     private boolean initialLoad = true;
+
+    @Inject
+    private PluginManager pluginManager;
+
+    /**
+     * Some development/test harnesses may instantiate this plugin without fully installing the Bank Tags
+     * module bindings, which would otherwise fail plugin construction if this dependency is required.
+     *
+     * We don't require BankTagsService for core functionality here, so keep this optional.
+     */
+    @com.google.inject.Inject(optional = true)
+    @SuppressWarnings("unused")
+    private net.runelite.client.plugins.banktags.BankTagsService bankTagsService;
 
     @Getter
     private final InventorySetupsDataLoader dataManager;
@@ -77,6 +95,28 @@ public class InventorySetupsSearchFilter extends SearchFilter {
     {
         if (option == inventorySetupsFilter)
         {
+            // If Inventory Setups has an active (currently selected) setup, optionally skip the setup list
+            // and go straight to filtering for that setup.
+            if (option.getData() == null && config.invSetupsAutoSelectActiveSetup())
+            {
+                final String activeSetupName = getActiveInventorySetupName();
+                if (activeSetupName != null)
+                {
+                    // Ensure setups are loaded before attempting to resolve the setup.
+                    if (inventorySetups == null || inventorySetups.isEmpty())
+                    {
+                        loadUpdatedInventorySetups();
+                    }
+
+                    if (getInventorySetup(activeSetupName) != null)
+                    {
+                        inventorySetupsFilter.setData(activeSetupName);
+                        generateSetupResults(activeSetupName);
+                        return;
+                    }
+                }
+            }
+
             if (option.getData() != null)
             {
                 generateSetupResults((String)(option.getData()));
@@ -86,6 +126,60 @@ public class InventorySetupsSearchFilter extends SearchFilter {
                 addInvSetupsFilterOptionResults();
             }
         }
+    }
+
+    @Nullable
+    private String getActiveInventorySetupName()
+    {
+        if (pluginManager == null)
+        {
+            return null;
+        }
+
+        try
+        {
+            for (Plugin plugin : pluginManager.getPlugins())
+            {
+                if (!GEFiltersPlugin.INVENTORY_SETUPS_COMP_NAME.equals(plugin.getName()))
+                {
+                    continue;
+                }
+
+                // If the plugin isn't enabled, it can't have an active setup.
+                if (!pluginManager.isPluginEnabled(plugin))
+                {
+                    return null;
+                }
+
+                // Inventory Setups keeps the active setup in its panel state.
+                final Field panelField = plugin.getClass().getDeclaredField("panel");
+                panelField.setAccessible(true);
+                final Object panel = panelField.get(plugin);
+                if (panel == null)
+                {
+                    return null;
+                }
+
+                final Method getCurrentSelectedSetup = panel.getClass().getMethod("getCurrentSelectedSetup");
+                final Object selectedSetup = getCurrentSelectedSetup.invoke(panel);
+                if (selectedSetup == null)
+                {
+                    return null;
+                }
+
+                final Method getName = selectedSetup.getClass().getMethod("getName");
+                final Object nameObj = getName.invoke(selectedSetup);
+                final String name = nameObj == null ? null : nameObj.toString();
+                return (name == null || name.trim().isEmpty()) ? null : name;
+            }
+        }
+        catch (Exception ignored)
+        {
+            // Best-effort only: Inventory Setups is an external plugin and implementation details can change.
+            return null;
+        }
+
+        return null;
     }
 
     @Subscribe
@@ -392,11 +486,16 @@ public class InventorySetupsSearchFilter extends SearchFilter {
         setGESearchResults(itemResultIds);
     }
 
-    private void loadUpdatedInventorySetups() {
+    private void loadUpdatedInventorySetups()
+    {
         if (dataManager == null || clientThread == null)
+        {
             return;
+        }
 
-        clientThread.invokeLater(() -> inventorySetups = dataManager.getSetups());
+        // Ensure this runs on the client thread, but do it immediately where possible so the
+        // setup list/auto-selection is available on the same GE interaction.
+        clientThread.invoke(() -> inventorySetups = dataManager.getSetups());
     }
 
     @Subscribe

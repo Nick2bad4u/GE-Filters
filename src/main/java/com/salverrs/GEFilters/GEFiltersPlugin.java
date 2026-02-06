@@ -97,7 +97,20 @@ public class GEFiltersPlugin extends Plugin
 	@Subscribe
 	public void onScriptPostFired(ScriptPostFired event)
 	{
-		if (event.getScriptId() == SEARCH_BOX_LOADED_ID)
+		// Chatbox message layer closed (eg. item selected or input cancelled). If we keep widgets around
+		// they can become detached/stale and won't reappear until the GE is re-opened.
+		if (event.getScriptId() == ScriptID.MESSAGE_LAYER_CLOSE)
+		{
+			if (filtersRunning)
+			{
+				clientThread.invoke(this::hideFilters);
+			}
+			return;
+		}
+
+		// The GE chatbox search is sometimes rebuilt without re-running the full GE_ITEM_SEARCH script.
+		// Ensure filters start whenever the message-layer input is rebuilt as well.
+		if (event.getScriptId() == SEARCH_BOX_LOADED_ID || event.getScriptId() == ScriptID.CHAT_TEXT_INPUT_REBUILD)
 		{
 			clientThread.invoke(this::tryStartFilters);
 			clientThread.invokeLater(this::hideSearchPrefixIfPresent);
@@ -312,7 +325,9 @@ public class GEFiltersPlugin extends Plugin
 		}
 
 		final Widget widget = client.getWidget(WIDGET_ID_CHATBOX_GE_SEARCH_RESULTS);
-		return widget != null && !widget.isHidden();
+		// The scroll contents can be hidden (e.g. "previous search" view) while the GE search interface
+		// is still active. We only care that the widget exists.
+		return widget != null;
 	}
 
 	@Provides

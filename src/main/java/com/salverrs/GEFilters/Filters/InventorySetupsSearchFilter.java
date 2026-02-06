@@ -12,7 +12,9 @@ import net.runelite.api.*;
 import net.runelite.api.events.ClientTick;
 import net.runelite.api.events.WidgetClosed;
 import net.runelite.api.events.WidgetLoaded;
-import net.runelite.api.widgets.*;
+import net.runelite.api.gameval.InterfaceID;
+import net.runelite.api.widgets.JavaScriptCallback;
+import net.runelite.api.widgets.Widget;
 import java.util.*;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
@@ -30,7 +32,7 @@ public class InventorySetupsSearchFilter extends SearchFilter {
     private static final String INV_SETUPS_MENU_IDENTIFIER = "Open setup";
     private static final String INV_SETUPS_MENU_IDENTIFIER_2 = "Open Section";
     private static final String SETUPS_EXCEPTION_JSON_KEY = "inventory-setups-exceptions";
-    private static final int WIDGET_ID_CHATBOX_GE_SEARCH_RESULTS = 10616883;
+    private static final int WIDGET_ID_CHATBOX_GE_SEARCH_RESULTS = InterfaceID.Chatbox.MES_LAYER_SCROLLCONTENTS;
     private final GEFiltersConfig config;
     private FilterOption inventorySetupsFilter;
     private boolean bankOpen = false;
@@ -89,7 +91,7 @@ public class InventorySetupsSearchFilter extends SearchFilter {
     @Subscribe
     public void onWidgetLoaded(WidgetLoaded event)
     {
-        if (event.getGroupId() == InterfaceID.BANK)
+        if (event.getGroupId() == InterfaceID.BANKMAIN)
         {
             bankOpen = true;
         }
@@ -100,7 +102,7 @@ public class InventorySetupsSearchFilter extends SearchFilter {
     {
         super.onWidgetClosed(event);
 
-        if (event.getGroupId() == InterfaceID.BANK)
+        if (event.getGroupId() == InterfaceID.BANKMAIN)
         {
             bankOpen = false;
         }

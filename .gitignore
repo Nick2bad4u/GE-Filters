@@ -110,8 +110,8 @@ nbproject/
 # VS Code Local History (duplicate, but kept for clarity)
 .history/
 
-# Java source folder (if generated or not tracked)
-java/
+# Bundled JDK folder at repo root
+/java/
 
 # Language Server Protocol workspace folder
 .lsp/

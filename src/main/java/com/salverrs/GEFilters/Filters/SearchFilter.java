@@ -6,7 +6,8 @@ import com.salverrs.GEFilters.Filters.Model.SearchState;
 import com.salverrs.GEFilters.GEFiltersConfig;
 import net.runelite.api.*;
 import net.runelite.api.events.*;
-import net.runelite.api.widgets.InterfaceID;
+import net.runelite.api.gameval.InterfaceID;
+import net.runelite.api.gameval.VarClientID;
 import net.runelite.api.widgets.Widget;
 import net.runelite.api.widgets.WidgetType;
 import net.runelite.client.callback.ClientThread;
@@ -36,10 +37,10 @@ public abstract class SearchFilter
     private static final int KEY_PRESS_SCRIPT_ID = 905;
     private static final int ICON_BG_SIZE_OFFSET = 6;
     private static final int ICON_BG_POS_OFFSET = 3;
-    private static final int WIDGET_ID_CHATBOX_GE_SEARCH_RESULTS = 10616883;
-    private static final int WIDGET_ID_CHATBOX_CONTAINER = 10616870;
-    private static final int WIDGET_ID_CHATBOX_TITLE = 10616874;
-    private static final int WIDGET_ID_CHATBOX_FULL_INPUT = 10616875;
+    private static final int WIDGET_ID_CHATBOX_GE_SEARCH_RESULTS = InterfaceID.Chatbox.MES_LAYER_SCROLLCONTENTS;
+    private static final int WIDGET_ID_CHATBOX_CONTAINER = InterfaceID.Chatbox.MES_LAYER;
+    private static final int WIDGET_ID_CHATBOX_TITLE = InterfaceID.Chatbox.MES_TEXT;
+    private static final int WIDGET_ID_CHATBOX_FULL_INPUT = InterfaceID.Chatbox.MES_TEXT2;
     private boolean qhEnabled;
     private Widget container;
     private Widget iconWidget;
@@ -101,12 +102,17 @@ public abstract class SearchFilter
         {
             disableFilter(true);
         }
+
+        // When the GE is closed (or the plugin hides filters), stop responding to events.
+        // This allows the plugin to keep subscribers registered without causing stale widgets
+        // or consuming events in other interfaces which reuse the GE chatbox search.
+        ready = false;
     }
 
     @Subscribe
     public void onWidgetClosed(WidgetClosed event)
     {
-        if (event.getGroupId() == InterfaceID.GRAND_EXCHANGE)
+        if (event.getGroupId() == InterfaceID.GE_OFFERS)
         {
             disableFilter(true);
         }
@@ -149,7 +155,7 @@ public abstract class SearchFilter
         if (!ready)
             return;
 
-        final String input = client.getVarcStrValue(VarClientStr.INPUT_TEXT);
+        final String input = client.getVarcStrValue(VarClientID.MESLAYERINPUT);
         if (!filterSearchMap.containsKey(input))
             return;
 
@@ -210,8 +216,8 @@ public abstract class SearchFilter
 
     protected void searchGE(String searchTerm, boolean hideSearch)
     {
-        client.setVarcStrValue(VarClientStr.INPUT_TEXT, searchTerm);
-        client.setVarcIntValue(VarClientInt.INPUT_TYPE, 14);
+        client.setVarcStrValue(VarClientID.MESLAYERINPUT, searchTerm);
+        client.setVarcIntValue(VarClientID.MESLAYERMODE, 14);
         forceUpdateSearch(hideSearch);
     }
 
@@ -352,8 +358,8 @@ public abstract class SearchFilter
 
         if (clearSearch)
         {
-            client.setVarcStrValue(VarClientStr.INPUT_TEXT, "");
-            client.setVarcIntValue(VarClientInt.INPUT_TYPE, 14);
+            client.setVarcStrValue(VarClientID.MESLAYERINPUT, "");
+            client.setVarcIntValue(VarClientID.MESLAYERMODE, 14);
             forceUpdateSearch(false);
         }
     }

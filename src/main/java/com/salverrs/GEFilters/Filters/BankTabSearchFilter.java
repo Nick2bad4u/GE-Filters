@@ -7,7 +7,9 @@ import com.salverrs.GEFilters.Filters.Model.GeSearchResultWidget;
 import com.salverrs.GEFilters.GEFiltersPlugin;
 import net.runelite.api.*;
 import net.runelite.api.events.*;
-import net.runelite.api.widgets.*;
+import net.runelite.api.gameval.InterfaceID;
+import net.runelite.api.widgets.JavaScriptCallback;
+import net.runelite.api.widgets.Widget;
 import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.plugins.banktags.BankTagsPlugin;
 import net.runelite.client.util.Text;
@@ -24,7 +26,7 @@ public class BankTabSearchFilter extends SearchFilter {
     private static final String SEARCH_BASE_MAIN = "bank-tags";
     private static final String TAG_TAB_MENU_IDENTIFIER = "Export tag tab";
     private static final String TAG_EXCEPTION_JSON_KEY = "bank-tags-exceptions";
-    private static final int WIDGET_ID_CHATBOX_GE_SEARCH_RESULTS = 10616883;
+    private static final int WIDGET_ID_CHATBOX_GE_SEARCH_RESULTS = InterfaceID.Chatbox.MES_LAYER_SCROLLCONTENTS;
     private boolean bankOpen = false;
     private FilterOption bankTabFilter;
     private List<String> tagExceptions = new ArrayList<>();
@@ -55,7 +57,7 @@ public class BankTabSearchFilter extends SearchFilter {
     @Subscribe
     public void onWidgetLoaded(WidgetLoaded event)
     {
-        if (event.getGroupId() == InterfaceID.BANK)
+        if (event.getGroupId() == InterfaceID.BANKMAIN)
         {
             bankOpen = true;
         }
@@ -66,7 +68,7 @@ public class BankTabSearchFilter extends SearchFilter {
     {
         super.onWidgetClosed(event);
 
-        if (event.getGroupId() == InterfaceID.BANK)
+        if (event.getGroupId() == InterfaceID.BANKMAIN)
         {
             bankOpen = false;
         }

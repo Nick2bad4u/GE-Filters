@@ -7,8 +7,8 @@ import com.salverrs.GEFilters.Filters.*;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.*;
 import net.runelite.api.events.*;
+import net.runelite.api.gameval.InterfaceID;
 import net.runelite.api.widgets.Widget;
-import net.runelite.api.widgets.InterfaceID;
 import net.runelite.client.callback.ClientThread;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.eventbus.EventBus;
@@ -37,9 +37,9 @@ public class GEFiltersPlugin extends Plugin
 	public static final String BANK_TAGS_COMP_NAME = "Bank Tags";
 	private static final String SEARCH_BUY_PREFIX = "What would you like to buy?";
 	public static final String INVENTORY_SETUPS_COMP_NAME = "Inventory Setups";
-	private static final int WIDGET_ID_CHATBOX_GE_SEARCH_RESULTS = 10616883;
-	private static final int SEARCH_BOX_LOADED_ID = 750;
-	private static final int SEARCH_STRING_APPEND_ID = 222;
+	private static final int WIDGET_ID_CHATBOX_GE_SEARCH_RESULTS = InterfaceID.Chatbox.MES_LAYER_SCROLLCONTENTS;
+	private static final int WIDGET_ID_CHATBOX_CONTAINER = InterfaceID.Chatbox.MES_LAYER;
+	private static final int SEARCH_BOX_LOADED_ID = ScriptID.GE_ITEM_SEARCH;
 
 	@Inject
 	private Client client;
@@ -63,6 +63,12 @@ public class GEFiltersPlugin extends Plugin
 	private PluginManager pluginManager;
 
 	private List<SearchFilter> filters;
+	/**
+	 * Guard against starting filters multiple times while the GE chatbox search is already open.
+	 * Multiple starts can create duplicate widgets where the visible widget is no longer the one
+	 * referenced by the SearchFilter instance, making clicks appear to do nothing.
+	 */
+	private boolean filtersRunning;
 	/**
 	 * RuneLite/OSRS has started re-using the GE search chatbox interface in other contexts
 	 * (e.g. the sailing mermaid riddle/puzzle). We only want to show GE Filters when the
@@ -94,6 +100,7 @@ public class GEFiltersPlugin extends Plugin
 		if (event.getScriptId() == SEARCH_BOX_LOADED_ID)
 		{
 			clientThread.invoke(this::tryStartFilters);
+			clientThread.invokeLater(this::hideSearchPrefixIfPresent);
 		}
 	}
 
@@ -104,39 +111,28 @@ public class GEFiltersPlugin extends Plugin
 		if (event.getGameState() == GameState.LOGIN_SCREEN)
 		{
 			grandExchangeInterfaceOpen = false;
-			clientThread.invoke(this::stopFilters);
+			clientThread.invoke(this::hideFilters);
 		}
 	}
 
 	@Subscribe
 	public void onWidgetLoaded(WidgetLoaded event)
 	{
-		if (event.getGroupId() == InterfaceID.GRAND_EXCHANGE)
+		if (event.getGroupId() == InterfaceID.GE_OFFERS)
 		{
 			grandExchangeInterfaceOpen = true;
 			clientThread.invoke(this::tryStartFilters);
-		}
-
-		// Replace with the correct group ID for GE search if needed
-		if (config.hideSearchPrefix() && event.getGroupId() == 1062) // 1062 is commonly GE search group
-		{
-			clientThread.invokeLater(() -> {
-				// Replace with the correct WidgetInfo if available in your RuneLite version
-				Widget searchInput = client.getWidget(1062, 44); // 44 is usually the input field index
-				if (searchInput != null && SEARCH_BUY_PREFIX.equals(searchInput.getText())) {
-					searchInput.setText("");
-				}
-			});
+			clientThread.invokeLater(this::hideSearchPrefixIfPresent);
 		}
 	}
 
 	@Subscribe
 	public void onWidgetClosed(WidgetClosed event)
 	{
-		if (event.getGroupId() == InterfaceID.GRAND_EXCHANGE)
+		if (event.getGroupId() == InterfaceID.GE_OFFERS)
 		{
 			grandExchangeInterfaceOpen = false;
-			clientThread.invoke(this::stopFilters);
+			clientThread.invoke(this::hideFilters);
 		}
 	}
 
@@ -183,14 +179,54 @@ public class GEFiltersPlugin extends Plugin
 
 	private void tryStartFilters()
 	{
+		// If the plugin is enabled while the GE is already open we may not receive WidgetLoaded.
+		// Infer state from the presence of the GE root widget.
+		if (!grandExchangeInterfaceOpen && client.getWidget(InterfaceID.GE_OFFERS, 0) != null)
+		{
+			grandExchangeInterfaceOpen = true;
+		}
+
+		// If something went wrong with teardown (missed close event), don't get stuck forever.
+		if (filtersRunning && !isSearchVisible())
+		{
+			filtersRunning = false;
+		}
+
+		if (filtersRunning)
+		{
+			return;
+		}
+
 		if (isSearchVisible())
 		{
 			startFilters();
 		}
 	}
 
+	private void hideSearchPrefixIfPresent()
+	{
+		if (!config.hideSearchPrefix())
+		{
+			return;
+		}
+
+		// GE search chatbox is re-used in other content; only hide the prefix on the actual GE screen.
+		if (!grandExchangeInterfaceOpen)
+		{
+			return;
+		}
+
+		// Use the documented API rather than hardcoded group/child ids.
+		final Widget focused = client.getFocusedInputFieldWidget();
+		if (focused != null && SEARCH_BUY_PREFIX.equals(focused.getText()))
+		{
+			focused.setText("");
+		}
+	}
+
 	private void startFilters()
 	{
+		filtersRunning = true;
 		final int horizontalSpacing = SearchFilter.ICON_SIZE + config.filterHorizontalSpacing();
 		int xOffset = 0;
 
@@ -203,6 +239,21 @@ public class GEFiltersPlugin extends Plugin
 
 	private void stopFilters()
 	{
+		filtersRunning = false;
+		hideFilters();
+		unregisterFilterEvents();
+	}
+
+	/**
+	 * Hide/stop filter widgets without unregistering event subscribers.
+	 *
+	 * We keep filters registered for the plugin lifetime, and rely on SearchFilter#ready
+	 * to ignore events while GE search is not active.
+	 */
+	private void hideFilters()
+	{
+		filtersRunning = false;
+
 		if (filters == null)
 		{
 			return;
@@ -212,8 +263,6 @@ public class GEFiltersPlugin extends Plugin
 		{
 			filter.stop();
 		}
-
-		unregisterFilterEvents();
 	}
 
 	private void registerFilterEvents()
@@ -250,6 +299,14 @@ public class GEFiltersPlugin extends Plugin
 	private boolean isSearchVisible()
 	{
 		if (!grandExchangeInterfaceOpen)
+		{
+			return false;
+		}
+
+		// Avoid starting filters before the underlying chatbox container is actually available.
+		// If we start too early, SearchFilter#start will no-op and filtersRunning may get stuck.
+		final Widget container = client.getWidget(WIDGET_ID_CHATBOX_CONTAINER);
+		if (container == null || container.isHidden())
 		{
 			return false;
 		}

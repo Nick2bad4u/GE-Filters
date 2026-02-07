@@ -1,5 +1,6 @@
 package com.salverrs.GEFilters.Filters;
 
+import com.google.common.hash.Hashing;
 import com.google.gson.Gson;
 import javax.inject.Inject;
 import com.salverrs.GEFilters.Filters.Model.FilterOption;
@@ -23,11 +24,6 @@ import com.salverrs.GEFilters.Filters.Model.InventorySetups.Serialization.*;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.events.ConfigChanged;
-import net.runelite.client.plugins.Plugin;
-import net.runelite.client.plugins.PluginManager;
-import javax.annotation.Nullable;
-import java.lang.reflect.Field;
-import java.lang.reflect.Method;
 
 public class InventorySetupsSearchFilter extends SearchFilter {
 
@@ -38,6 +34,12 @@ public class InventorySetupsSearchFilter extends SearchFilter {
     private static final String INV_SETUPS_MENU_IDENTIFIER_2 = "Open Section";
     private static final String SETUPS_EXCEPTION_JSON_KEY = "inventory-setups-exceptions";
     private static final int WIDGET_ID_CHATBOX_GE_SEARCH_RESULTS = InterfaceID.Chatbox.MES_LAYER_SCROLLCONTENTS;
+	/**
+	 * Inventory Setups uses Bank Tags layouts with a stable tag prefix. We can infer the setup name
+	 * from the currently active bank tag when Inventory Setups bank filtering/layout is active.
+	 */
+	private static final String INV_SETUP_TAG_PREFIX = "_invsetup_";
+	private static final String CONFIG_KEY_LAST_ACTIVE_SETUP = "invSetupsLastActiveSetup";
     private final GEFiltersConfig config;
     private FilterOption inventorySetupsFilter;
     private boolean bankOpen = false;
@@ -45,9 +47,6 @@ public class InventorySetupsSearchFilter extends SearchFilter {
     private Gson gson;
     private List<InventorySetup> inventorySetups = new ArrayList<>();
     private boolean initialLoad = true;
-
-    @Inject
-    private PluginManager pluginManager;
 
     /**
      * Some development/test harnesses may instantiate this plugin without fully installing the Bank Tags
@@ -128,58 +127,96 @@ public class InventorySetupsSearchFilter extends SearchFilter {
         }
     }
 
-    @Nullable
     private String getActiveInventorySetupName()
     {
-        if (pluginManager == null)
+        final String inferred = inferActiveSetupFromBankTags();
+        if (inferred != null)
+        {
+            return inferred;
+        }
+
+        // Fallback: use the last inferred setup persisted by the plugin.
+        final String last = configManager.getConfiguration(GEFiltersPlugin.CONFIG_GROUP_DATA, CONFIG_KEY_LAST_ACTIVE_SETUP);
+        if (last == null || last.trim().isEmpty())
         {
             return null;
         }
 
-        try
+        ensureSetupsLoadedBestEffort();
+        if (setupExceptions.contains(last) || getInventorySetup(last) == null)
         {
-            for (Plugin plugin : pluginManager.getPlugins())
+            return null;
+        }
+
+        return last;
+    }
+
+    private String inferActiveSetupFromBankTags()
+    {
+        if (bankTagsService == null)
+        {
+            return null;
+        }
+
+        final String activeTag = bankTagsService.getActiveTag();
+        if (activeTag == null || !activeTag.startsWith(INV_SETUP_TAG_PREFIX))
+        {
+            return null;
+        }
+
+        final String targetHash = activeTag.substring(INV_SETUP_TAG_PREFIX.length());
+        if (targetHash.isEmpty())
+        {
+            return null;
+        }
+
+        ensureSetupsLoadedBestEffort();
+        if (inventorySetups == null || inventorySetups.isEmpty())
+        {
+            return null;
+        }
+
+        for (InventorySetup setup : inventorySetups)
+        {
+            final String name = setup.getName();
+            if (name == null || setupExceptions.contains(name))
             {
-                if (!GEFiltersPlugin.INVENTORY_SETUPS_COMP_NAME.equals(plugin.getName()))
-                {
-                    continue;
-                }
-
-                // If the plugin isn't enabled, it can't have an active setup.
-                if (!pluginManager.isPluginEnabled(plugin))
-                {
-                    return null;
-                }
-
-                // Inventory Setups keeps the active setup in its panel state.
-                final Field panelField = plugin.getClass().getDeclaredField("panel");
-                panelField.setAccessible(true);
-                final Object panel = panelField.get(plugin);
-                if (panel == null)
-                {
-                    return null;
-                }
-
-                final Method getCurrentSelectedSetup = panel.getClass().getMethod("getCurrentSelectedSetup");
-                final Object selectedSetup = getCurrentSelectedSetup.invoke(panel);
-                if (selectedSetup == null)
-                {
-                    return null;
-                }
-
-                final Method getName = selectedSetup.getClass().getMethod("getName");
-                final Object nameObj = getName.invoke(selectedSetup);
-                final String name = nameObj == null ? null : nameObj.toString();
-                return (name == null || name.trim().isEmpty()) ? null : name;
+                continue;
             }
-        }
-        catch (Exception ignored)
-        {
-            // Best-effort only: Inventory Setups is an external plugin and implementation details can change.
-            return null;
+
+            final String hash = Hashing.murmur3_128().hashUnencodedChars(name).toString();
+            if (targetHash.equals(hash))
+            {
+                configManager.setConfiguration(GEFiltersPlugin.CONFIG_GROUP_DATA, CONFIG_KEY_LAST_ACTIVE_SETUP, name);
+                return name;
+            }
         }
 
         return null;
+    }
+
+    private void ensureSetupsLoadedBestEffort()
+    {
+        if (dataManager == null)
+        {
+            return;
+        }
+
+        if (inventorySetups != null && !inventorySetups.isEmpty())
+        {
+            return;
+        }
+
+        if (client != null && client.isClientThread())
+        {
+            inventorySetups = dataManager.getSetups();
+            return;
+        }
+
+        if (clientThread != null)
+        {
+            clientThread.invoke(() -> inventorySetups = dataManager.getSetups());
+        }
     }
 
     @Subscribe

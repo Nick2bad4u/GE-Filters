@@ -30,15 +30,14 @@
 package com.salverrs.GEFilters.Filters.Model.InventorySetups;
 
 import com.google.gson.Gson;
-import com.google.gson.reflect.TypeToken;
 import com.salverrs.GEFilters.Filters.Model.InventorySetups.Serialization.InventorySetupItemSerializable;
 import com.salverrs.GEFilters.Filters.Model.InventorySetups.Serialization.InventorySetupItemSerializableTypeAdapter;
 import com.salverrs.GEFilters.Filters.Model.InventorySetups.Serialization.InventorySetupSerializable;
 import com.salverrs.GEFilters.Filters.Model.InventorySetups.Serialization.LongTypeAdapter;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.client.config.ConfigManager;
-import java.lang.reflect.Type;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -88,16 +87,9 @@ public class InventorySetupsDataLoader
                 key -> key.substring(wholePrefix.length() - CONFIG_KEY_SETUPS_V3_PREFIX.length())
         ).collect(Collectors.toSet());
 
-        Type setupsOrderType = new TypeToken<ArrayList<String>>()
-        {
-
-        }.getType();
         final String setupsOrderJson = configManager.getConfiguration(CONFIG_GROUP, CONFIG_KEY_SETUPS_ORDER_V3);
-        List<String> setupsOrder = gson.fromJson(setupsOrderJson, setupsOrderType);
-        if (setupsOrder == null)
-        {
-            setupsOrder = new ArrayList<>();
-        }
+        final String[] setupsOrderArray = gson.fromJson(setupsOrderJson, String[].class);
+        final List<String> setupsOrder = setupsOrderArray == null ? new ArrayList<>() : new ArrayList<>(Arrays.asList(setupsOrderArray));
 
         List<InventorySetup> loadedSetups = new ArrayList<>();
         for (final String configHash : setupsOrder)

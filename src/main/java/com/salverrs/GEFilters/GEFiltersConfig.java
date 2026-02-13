@@ -97,6 +97,37 @@ public interface GEFiltersConfig extends Config
 	default boolean invSetupsAutoSelectActiveSetup(){ return false; }
 
 	@ConfigItem(
+		position = 8,
+		keyName = "autoSelectFilterOnBuy",
+		name = "Auto-select filter on buy",
+		description = "Automatically enables one GE Filters tab when opening GE item search for buying."
+	)
+	default AutoSelectFilterOnBuyMode autoSelectFilterOnBuy()
+	{
+		return AutoSelectFilterOnBuyMode.OFF;
+	}
+
+	@ConfigItem(
+		position = 9,
+		keyName = "filterButtonsBothSides",
+		name = "Wider buttons on both sides",
+		description = "Use wider labeled filter buttons and place them on both sides of the GE search box."
+	)
+	default boolean filterButtonsBothSides()
+	{
+		return false;
+	}
+
+	enum AutoSelectFilterOnBuyMode
+	{
+		OFF,
+		INVENTORY,
+		RECENT_ITEMS,
+		BANK_TAGS,
+		INVENTORY_SETUPS
+	}
+
+	@ConfigItem(
 			keyName = "enableInvSetupsInventory",
 			name = "Inventory",
 			description = "Show inventory items in the Inventory Setups filter.",
@@ -135,7 +166,7 @@ public interface GEFiltersConfig extends Config
 	@ConfigItem(
 			keyName = "enableInvSetupsAdditionalItems",
 			name = "Additional Filtered Items",
-			description = "Show additional filtered items the Inventory Setups filter.",
+			description = "Include Inventory Setups \"Additional Filtered Items\" entries (items listed outside inventory/equipment/rune pouch/bolt pouch/quiver sections).",
 			section = inventorySetupsSection,
 			position = 9
 	)

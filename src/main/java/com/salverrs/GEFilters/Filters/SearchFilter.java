@@ -8,6 +8,7 @@ import net.runelite.api.*;
 import net.runelite.api.events.*;
 import net.runelite.api.gameval.InterfaceID;
 import net.runelite.api.gameval.VarClientID;
+import net.runelite.api.widgets.JavaScriptCallback;
 import net.runelite.api.widgets.Widget;
 import net.runelite.api.widgets.WidgetType;
 import net.runelite.client.callback.ClientThread;
@@ -29,6 +30,9 @@ import java.util.List;
 public abstract class SearchFilter
 {
     public static final int ICON_SIZE = 20;
+    public static final int WIDE_BUTTON_WIDTH = 56;
+    private static final int SPRITE_UNKNOWN_BUTTON_SQUARE_SMALL = 195;
+    private static final int SPRITE_UNKNOWN_BUTTON_SQUARE_SMALL_SELECTED = 196;
     private static final String CLEAR_FILTER_OPTION = "Clear Filter";
     private static final String QUEST_HELPER_COMP_WIDGET_NAME = "quest helper";
     private static final String QUEST_HELPER_COMP_NAME = "Quest Helper";
@@ -41,6 +45,7 @@ public abstract class SearchFilter
     private static final int WIDGET_ID_CHATBOX_CONTAINER = InterfaceID.Chatbox.MES_LAYER;
     private static final int WIDGET_ID_CHATBOX_TITLE = InterfaceID.Chatbox.MES_TEXT;
     private static final int WIDGET_ID_CHATBOX_FULL_INPUT = InterfaceID.Chatbox.MES_TEXT2;
+    private static int enabledFilterCount;
     private boolean qhEnabled;
     private Widget container;
     private Widget iconWidget;
@@ -125,6 +130,9 @@ public abstract class SearchFilter
             return;
 
         final String optionClicked = event.getMenuOption();
+        if (optionClicked == null)
+            return;
+
         if (optionClicked.contains(QUEST_HELPER_FILTER_OPTION))
         {
             disableFilter(true);
@@ -132,7 +140,9 @@ public abstract class SearchFilter
         }
 
         final Widget widget = event.getWidget();
-        if (widget != backgroundWidget && widget != iconWidget)
+            final boolean widgetMatches = widget == backgroundWidget || widget == iconWidget;
+        final boolean knownOption = CLEAR_FILTER_OPTION.equals(optionClicked) || filterTitleMap.containsKey(optionClicked);
+        if (!widgetMatches && !knownOption)
             return;
 
         if (optionClicked.equals(CLEAR_FILTER_OPTION))
@@ -143,6 +153,9 @@ public abstract class SearchFilter
         {
             resolveQuestHelperFilterState();
             FilterOption option = filterTitleMap.get(optionClicked);
+            if (option == null)
+                return;
+
             enableFilter(option, false, true);
         }
 
@@ -253,6 +266,23 @@ public abstract class SearchFilter
             filterTitleMap.put(title, option);
             filterSearchMap.put(option.getSearchValue(), option);
         }
+
+    }
+
+    protected final void autoEnableFilter(FilterOption option)
+    {
+        if (!ready || option == null)
+            return;
+
+        enableFilter(option, false, true);
+    }
+
+    public final void autoEnablePrimaryFilterOption()
+    {
+        if (filterTitles == null || filterTitles.isEmpty())
+            return;
+
+        autoEnableFilter(filterTitleMap.get(filterTitles.get(0)));
     }
 
     protected void setIconSprite(int spriteId, int sizeOffset)
@@ -317,12 +347,28 @@ public abstract class SearchFilter
         }
     }
 
+    public static boolean isAnyFilterEnabled()
+    {
+        return enabledFilterCount > 0;
+    }
+
+    public static int getConfiguredButtonWidth(GEFiltersConfig config)
+    {
+        return config != null && config.filterButtonsBothSides() ? WIDE_BUTTON_WIDTH : ICON_SIZE;
+    }
+
     private void enableFilter(FilterOption option, boolean silent, boolean clearData)
     {
         if (!ready)
             return;
 
+        final boolean wasEnabled = filterEnabled;
         filterEnabled = true;
+        if (!wasEnabled)
+        {
+            enabledFilterCount++;
+        }
+
         refreshFilterMenuOptions(true);
         setWidgetActivationState(true, true);
 
@@ -347,6 +393,11 @@ public abstract class SearchFilter
             return;
 
         filterEnabled = false;
+        if (enabledFilterCount > 0)
+        {
+            enabledFilterCount--;
+        }
+
         refreshFilterMenuOptions(false);
         resetPreviousSearchState();
 
@@ -388,7 +439,7 @@ public abstract class SearchFilter
     {
         if (backgroundWidget != null)
         {
-            backgroundWidget.setSpriteId(filterEnabled ? SpriteID.UNKNOWN_BUTTON_SQUARE_SMALL_SELECTED : SpriteID.UNKNOWN_BUTTON_SQUARE_SMALL);
+            backgroundWidget.setSpriteId(filterEnabled ? SPRITE_UNKNOWN_BUTTON_SQUARE_SMALL_SELECTED : SPRITE_UNKNOWN_BUTTON_SQUARE_SMALL);
             backgroundWidget.revalidate();
         }
 
@@ -409,22 +460,36 @@ public abstract class SearchFilter
 
         if (showClearOption)
         {
-            backgroundWidget.setAction(0, CLEAR_FILTER_OPTION);
+            setFilterWidgetAction(0, CLEAR_FILTER_OPTION);
         }
 
         int i = showClearOption ? 1 : 0;
         for (String optionTitle : filterTitles)
         {
-            backgroundWidget.setAction(i, optionTitle);
+            setFilterWidgetAction(i, optionTitle);
             i++;
         }
+    }
+
+    private void setFilterWidgetAction(int index, String action)
+    {
+        if (backgroundWidget != null)
+        {
+            backgroundWidget.setAction(index, action);
+        }
+
+        if (iconWidget != null)
+        {
+            iconWidget.setAction(index, action);
+        }
+
     }
 
     private void clearFilterOptions()
     {
         for (int i = 0; i <= filterTitleMap.size(); i++)
         {
-            backgroundWidget.setAction(i, null);
+            setFilterWidgetAction(i, null);
         }
     }
 
@@ -450,23 +515,28 @@ public abstract class SearchFilter
             return;
 
         final Widget[] children = container.getChildren();
+        if (children == null)
+            return;
+
         Widget qhIcon = null;
 
         for (int i = 0; i < children.length; i++)
         {
             final Widget child = children[i];
-            if (child.getName().equals(QUEST_HELPER_COMP_WIDGET_NAME))
+            if (child != null && QUEST_HELPER_COMP_WIDGET_NAME.equals(child.getName()))
             {
                 qhIcon = child;
                 break;
             }
         }
 
-        final boolean filterEnabled =  qhIcon != null && qhIcon.getSpriteId() == SpriteID.UNKNOWN_BUTTON_SQUARE_SMALL_SELECTED;
-        if (!filterEnabled)
+        if (qhIcon == null || qhIcon.getSpriteId() != SPRITE_UNKNOWN_BUTTON_SQUARE_SMALL_SELECTED)
             return;
 
         final Object[] filterArgs = qhIcon.getOnOpListener();
+        if (filterArgs == null)
+            return;
+
         client.runScript(filterArgs);
     }
 
@@ -490,11 +560,16 @@ public abstract class SearchFilter
         container = client.getWidget(WIDGET_ID_CHATBOX_CONTAINER);
         searchBoxWidget = client.getWidget(WIDGET_ID_CHATBOX_FULL_INPUT);
         titleWidget = createTitleWidget();
-        backgroundWidget = createGraphicWidget(SpriteID.UNKNOWN_BUTTON_SQUARE_SMALL, ICON_SIZE, ICON_SIZE, xOffset, yOffset);
+        final int buttonWidth = getConfiguredButtonWidth(config);
+        final int iconSize = ICON_SIZE - ICON_BG_SIZE_OFFSET + iconSpriteSizeOffset;
+        final int iconX = xOffset + ((buttonWidth - iconSize) / 2);
+        final int iconY = yOffset + ICON_BG_POS_OFFSET - (iconSpriteSizeOffset / 2);
+
+        backgroundWidget = createGraphicWidget(SPRITE_UNKNOWN_BUTTON_SQUARE_SMALL, buttonWidth, ICON_SIZE, xOffset, yOffset);
         iconWidget = createGraphicWidget(
                 iconSpriteId,
-                ICON_SIZE - ICON_BG_SIZE_OFFSET + iconSpriteSizeOffset, ICON_SIZE - ICON_BG_SIZE_OFFSET + iconSpriteSizeOffset,
-                xOffset + ICON_BG_POS_OFFSET - (iconSpriteSizeOffset / 2), yOffset + ICON_BG_POS_OFFSET - (iconSpriteSizeOffset / 2));
+                iconSize, iconSize,
+                iconX, iconY);
 
     }
 
@@ -508,7 +583,7 @@ public abstract class SearchFilter
         widget.setOriginalHeight(height);
 
         widget.setSpriteId(spriteId);
-        widget.setOnOpListener(ScriptID.NULL);
+        widget.setOnOpListener((JavaScriptCallback)e -> { });
         widget.setHasListener(true);
         widget.revalidate();
 

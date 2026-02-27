@@ -36,12 +36,33 @@ public class RecentItemsSearchFilter extends SearchFilter {
     private FilterOption recentlyViewed, recentBuyOffers, recentSellOffers;
     private ArrayList<Short> recentItemIds, recentBuyOffersItemIds, recentSellOffersItemIds;
 
+    private void ensureRecentListsLoaded()
+    {
+        if (recentItemIds == null)
+        {
+            loadRecentItems();
+        }
+
+        if (recentBuyOffersItemIds == null)
+        {
+            loadRecentBuyOfferItems();
+        }
+
+        if (recentSellOffersItemIds == null)
+        {
+            loadRecentSellOfferItems();
+        }
+    }
+
+    private boolean isGrandExchangeOpen()
+    {
+        return client.getWidget(InterfaceID.GE_OFFERS, 0) != null;
+    }
+
     @Override
     protected void onFilterInitialising()
     {
-        loadRecentItems();
-        loadRecentBuyOfferItems();
-        loadRecentSellOfferItems();
+        ensureRecentListsLoaded();
 
         recentlyViewed = new FilterOption(TITLE_RECENTLY_VIEWED, SEARCH_BASE_RECENTLY_VIEWED);
         recentBuyOffers = new FilterOption(TITLE_RECENT_BUY_OFFERS, SEARCH_BASE_RECENT_BUY_OFFERS);
@@ -54,9 +75,7 @@ public class RecentItemsSearchFilter extends SearchFilter {
     @Override
     protected void onFilterStarted()
     {
-        loadRecentItems();
-        loadRecentBuyOfferItems();
-        loadRecentSellOfferItems();
+        ensureRecentListsLoaded();
     }
 
     @Override
@@ -79,8 +98,7 @@ public class RecentItemsSearchFilter extends SearchFilter {
     @Subscribe
     public void onGrandExchangeOfferChanged(GrandExchangeOfferChanged newOfferEvent)
     {
-        if (!ready)
-            return;
+        ensureRecentListsLoaded();
 
         final GrandExchangeOffer offer = newOfferEvent.getOffer();
         final GrandExchangeOfferState offerState = offer.getState();
@@ -100,11 +118,13 @@ public class RecentItemsSearchFilter extends SearchFilter {
     @Subscribe
     protected void onVarbitChanged(VarbitChanged event)
     {
-        if (!ready)
-            return;
-
         if (event.getVarpId() != VARP_CURRENT_GE_ITEM)
             return;
+
+        if (!isGrandExchangeOpen())
+            return;
+
+        ensureRecentListsLoaded();
 
         // GE filter result generation can mutate CURRENT_GE_ITEM while custom filter views are open,
         // which pollutes recent-viewed history with synthetic/filter items.
@@ -121,12 +141,6 @@ public class RecentItemsSearchFilter extends SearchFilter {
     {
         super.onMenuOptionClicked(event);
 
-        if (!ready)
-            return;
-
-        if (!isGeSearchResultsOpen())
-            return;
-
         final String menuOption = event.getMenuOption();
         if (menuOption == null)
             return;
@@ -135,6 +149,13 @@ public class RecentItemsSearchFilter extends SearchFilter {
         final String normalizedOption = menuOption.replaceAll("<[^>]*>", "").trim();
         if (!normalizedOption.startsWith(MENU_OPTION_SELECT))
             return;
+
+        // Updates must continue even if SearchFilter widgets were just torn down.
+        // Restrict to GE context to avoid cross-interface pollution.
+        if (!isGrandExchangeOpen())
+            return;
+
+        ensureRecentListsLoaded();
 
         int itemId = event.getItemId();
         final net.runelite.api.widgets.Widget eventWidget = event.getWidget();

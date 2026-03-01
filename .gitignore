@@ -120,4 +120,5 @@ nbproject/
 .pytest_cache/
 
 #Ignore vscode AI rules
-.github\copilot-instructions.md
+.github/copilot-instructions.md
+.github/instructions/

@@ -4,8 +4,15 @@ import com.salverrs.GEFilters.Filters.Events.OtherFilterOptionActivated;
 import com.salverrs.GEFilters.Filters.Model.FilterOption;
 import com.salverrs.GEFilters.Filters.Model.SearchState;
 import com.salverrs.GEFilters.GEFiltersConfig;
-import net.runelite.api.*;
-import net.runelite.api.events.*;
+import lombok.extern.slf4j.Slf4j;
+import net.runelite.api.Client;
+import net.runelite.api.FontID;
+import net.runelite.api.ScriptEvent;
+import net.runelite.api.SoundEffectID;
+import net.runelite.api.events.GrandExchangeSearched;
+import net.runelite.api.events.MenuOptionClicked;
+import net.runelite.api.events.ScriptPreFired;
+import net.runelite.api.events.WidgetClosed;
 import net.runelite.api.gameval.InterfaceID;
 import net.runelite.api.gameval.VarClientID;
 import net.runelite.api.widgets.JavaScriptCallback;
@@ -19,14 +26,16 @@ import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginManager;
 import net.runelite.client.ui.JagexColors;
 import javax.inject.Inject;
-import java.awt.*;
+import java.awt.Color;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 // Heavily inspired by Quest helper's quest item filter - Credit to Zoinkwiz
 
+@Slf4j
 public abstract class SearchFilter
 {
     public static final int ICON_SIZE = 20;
@@ -41,11 +50,13 @@ public abstract class SearchFilter
     private static final int KEY_PRESS_SCRIPT_ID = 905;
     private static final int ICON_BG_SIZE_OFFSET = 6;
     private static final int ICON_BG_POS_OFFSET = 3;
+    private static final int GE_SEARCH_MODE = 14;
     private static final int WIDGET_ID_CHATBOX_GE_SEARCH_RESULTS = InterfaceID.Chatbox.MES_LAYER_SCROLLCONTENTS;
     private static final int WIDGET_ID_CHATBOX_CONTAINER = InterfaceID.Chatbox.MES_LAYER;
     private static final int WIDGET_ID_CHATBOX_TITLE = InterfaceID.Chatbox.MES_TEXT;
     private static final int WIDGET_ID_CHATBOX_FULL_INPUT = InterfaceID.Chatbox.MES_TEXT2;
     private static int enabledFilterCount;
+    private static SearchFilter activeFilter;
     private boolean qhEnabled;
     private Widget container;
     private Widget iconWidget;
@@ -59,11 +70,12 @@ public abstract class SearchFilter
     private int iconSpriteId;
     private int iconSpriteSizeOffset;
     private boolean filterEnabled;
+    private short[] lastGeSearchResultIds = new short[0];
 
     protected boolean ready;
 
-    private HashMap<String, FilterOption> filterTitleMap;
-    private HashMap<String, FilterOption> filterSearchMap;
+    private Map<String, FilterOption> filterTitleMap;
+    private Map<String, FilterOption> filterSearchMap;
 
     @Inject
     protected ConfigManager configManager;
@@ -81,23 +93,35 @@ public abstract class SearchFilter
     public void start(int xOffset, int yOffset)
     {
         if (isChatInputHidden())
+        {
+            log.info("[GEFDBG/SearchFilter] {} start skipped: chat input hidden", getClass().getSimpleName());
             return;
+        }
 
         if (!ready)
+        {
+            log.info("[GEFDBG/SearchFilter] {} initialising", getClass().getSimpleName());
             onFilterInitialising();
+        }
 
         onFilterStarted();
 
         checkQuestHelperState();
-        createWidgets(xOffset, yOffset);
+        if (!createWidgets(xOffset, yOffset))
+        {
+            log.info("[GEFDBG/SearchFilter] {} start aborted: createWidgets failed (xOffset={}, yOffset={})", getClass().getSimpleName(), xOffset, yOffset);
+            return;
+        }
         refreshFilterMenuOptions(false);
         handleReactivation();
 
         ready = true;
+        log.info("[GEFDBG/SearchFilter] {} start complete (xOffset={}, yOffset={}, filterEnabled={})", getClass().getSimpleName(), xOffset, yOffset, filterEnabled);
     }
 
     public void stop()
     {
+        log.info("[GEFDBG/SearchFilter] {} stop called (ready={}, filterEnabled={})", getClass().getSimpleName(), ready, filterEnabled);
         container = null;
         trySetHidden(titleWidget, true);
         trySetHidden(iconWidget, true);
@@ -108,10 +132,16 @@ public abstract class SearchFilter
             disableFilter(true);
         }
 
+        if (activeFilter == this)
+        {
+            activeFilter = null;
+        }
+
         // When the GE is closed (or the plugin hides filters), stop responding to events.
         // This allows the plugin to keep subscribers registered without causing stale widgets
         // or consuming events in other interfaces which reuse the GE chatbox search.
         ready = false;
+        log.info("[GEFDBG/SearchFilter] {} stop complete (ready={}, filterEnabled={})", getClass().getSimpleName(), ready, filterEnabled);
     }
 
     @Subscribe
@@ -140,12 +170,17 @@ public abstract class SearchFilter
         }
 
         final Widget widget = event.getWidget();
-            final boolean widgetMatches = widget == backgroundWidget || widget == iconWidget;
+        final boolean widgetMatches = widget == backgroundWidget || widget == iconWidget;
+        if (!widgetMatches)
+        {
+            return;
+        }
+
         final boolean knownOption = CLEAR_FILTER_OPTION.equals(optionClicked) || filterTitleMap.containsKey(optionClicked);
-        if (!widgetMatches && !knownOption)
+        if (!knownOption)
             return;
 
-        if (optionClicked.equals(CLEAR_FILTER_OPTION))
+        if (CLEAR_FILTER_OPTION.equals(optionClicked))
         {
             disableFilter(true);
         }
@@ -230,15 +265,54 @@ public abstract class SearchFilter
     protected void searchGE(String searchTerm, boolean hideSearch)
     {
         client.setVarcStrValue(VarClientID.MESLAYERINPUT, searchTerm);
-        client.setVarcIntValue(VarClientID.MESLAYERMODE, 14);
+        client.setVarcIntValue(VarClientID.MESLAYERMODE, GE_SEARCH_MODE);
         forceUpdateSearch(hideSearch);
     }
 
     protected void setGESearchResults(short[] itemIds)
     {
+        lastGeSearchResultIds = itemIds == null ? new short[0] : itemIds.clone();
         client.setGeSearchResultIndex(0);
-        client.setGeSearchResultCount(itemIds.length);
-        client.setGeSearchResultIds(itemIds);
+        client.setGeSearchResultCount(lastGeSearchResultIds.length);
+        client.setGeSearchResultIds(lastGeSearchResultIds);
+    }
+
+    protected int resolveActiveFilterItemIdFromRow(int rowIndex)
+    {
+        final short[] activeResultIds = getActiveFilterGeSearchResultIdsSnapshot();
+        if (activeResultIds.length == 0 || rowIndex < 0)
+        {
+            return -1;
+        }
+
+        // Depending on widget context, param0 can represent direct row index or child-index spacing.
+        final int[] candidateIndexes = new int[]
+                {
+                        rowIndex,
+                        rowIndex / 3,
+                        (rowIndex - 1) / 3,
+                        (rowIndex + 1) / 3
+                };
+
+        for (int candidate : candidateIndexes)
+        {
+            if (candidate >= 0 && candidate < activeResultIds.length)
+            {
+                return Short.toUnsignedInt(activeResultIds[candidate]);
+            }
+        }
+
+        return -1;
+    }
+
+    private short[] getGeSearchResultIdsSnapshot()
+    {
+        return lastGeSearchResultIds.clone();
+    }
+
+    protected static short[] getActiveFilterGeSearchResultIdsSnapshot()
+    {
+        return activeFilter == null ? new short[0] : activeFilter.getGeSearchResultIdsSnapshot();
     }
 
     protected void setTitle(String title)
@@ -362,8 +436,23 @@ public abstract class SearchFilter
         if (!ready)
             return;
 
+        if (option == null)
+        {
+            log.info("[GEFDBG/SearchFilter] {} enableFilter skipped: option null", getClass().getSimpleName());
+            return;
+        }
+
+        log.info("[GEFDBG/SearchFilter] {} enableFilter option='{}' search='{}' silent={} clearData={} wasEnabled={}",
+                getClass().getSimpleName(),
+                option.getTitle(),
+                option.getSearchValue(),
+                silent,
+                clearData,
+                filterEnabled);
+
         final boolean wasEnabled = filterEnabled;
         filterEnabled = true;
+        activeFilter = this;
         if (!wasEnabled)
         {
             enabledFilterCount++;
@@ -392,7 +481,16 @@ public abstract class SearchFilter
         if (!ready || !filterEnabled)
             return;
 
+        log.info("[GEFDBG/SearchFilter] {} disableFilter clearSearch={} enabledFilterCountBefore={}",
+                getClass().getSimpleName(),
+                clearSearch,
+                enabledFilterCount);
+
         filterEnabled = false;
+        if (activeFilter == this)
+        {
+            activeFilter = null;
+        }
         if (enabledFilterCount > 0)
         {
             enabledFilterCount--;
@@ -410,9 +508,13 @@ public abstract class SearchFilter
         if (clearSearch)
         {
             client.setVarcStrValue(VarClientID.MESLAYERINPUT, "");
-            client.setVarcIntValue(VarClientID.MESLAYERMODE, 14);
+            client.setVarcIntValue(VarClientID.MESLAYERMODE, GE_SEARCH_MODE);
             forceUpdateSearch(false);
         }
+
+        log.info("[GEFDBG/SearchFilter] {} disableFilter complete enabledFilterCountAfter={}",
+                getClass().getSimpleName(),
+                enabledFilterCount);
     }
 
     private void handleReactivation()
@@ -555,9 +657,15 @@ public abstract class SearchFilter
         return title != null && title.isHidden();
     }
 
-    private void createWidgets(int xOffset, int yOffset)
+    private boolean createWidgets(int xOffset, int yOffset)
     {
         container = client.getWidget(WIDGET_ID_CHATBOX_CONTAINER);
+        if (container == null)
+        {
+            log.info("[GEFDBG/SearchFilter] {} createWidgets failed: container null", getClass().getSimpleName());
+            return false;
+        }
+
         searchBoxWidget = client.getWidget(WIDGET_ID_CHATBOX_FULL_INPUT);
         titleWidget = createTitleWidget();
         final int buttonWidth = getConfiguredButtonWidth(config);
@@ -571,6 +679,14 @@ public abstract class SearchFilter
                 iconSize, iconSize,
                 iconX, iconY);
 
+        log.info("[GEFDBG/SearchFilter] {} createWidgets success (buttonWidth={}, iconSize={}, iconX={}, iconY={})",
+            getClass().getSimpleName(),
+            buttonWidth,
+            iconSize,
+            iconX,
+            iconY);
+
+        return true;
     }
 
     private Widget createGraphicWidget(int spriteId, int width, int height, int x, int y)

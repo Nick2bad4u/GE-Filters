@@ -1,8 +1,12 @@
 package com.salverrs.GEFilters;
 
-import net.runelite.client.config.*;
+import net.runelite.client.config.Config;
+import net.runelite.client.config.ConfigGroup;
+import net.runelite.client.config.ConfigItem;
+import net.runelite.client.config.ConfigSection;
+import net.runelite.client.config.Range;
 
-import java.awt.*;
+import java.awt.Color;
 
 @ConfigGroup(GEFiltersPlugin.CONFIG_GROUP)
 public interface GEFiltersConfig extends Config
@@ -77,6 +81,30 @@ public interface GEFiltersConfig extends Config
 		return true;
 	}
 
+	@ConfigItem(
+			keyName = "enablePinnedItemsFilter",
+			name = "Enable Pinned Items Filter",
+			description = "Show a standalone Pinned Items filter button/tab.",
+			section = filtersSection,
+			position = 4
+	)
+	default boolean enablePinnedItemsFilter()
+	{
+		return true;
+	}
+
+	@ConfigItem(
+			keyName = "enableBankHighlighterFilter",
+			name = "Enable Bank Highlighter Filter",
+			description = "Filters GE items by items tagged in the Bank Highlighter plugin.",
+			section = filtersSection,
+			position = 5
+	)
+	default boolean enableBankHighlighterFilter()
+	{
+		return true;
+	}
+
 
 	@ConfigItem(
 			keyName = "enableInvSetupsEquipment",
@@ -123,6 +151,7 @@ public interface GEFiltersConfig extends Config
 		OFF,
 		INVENTORY,
 		RECENT_ITEMS,
+		PINNED_ITEMS,
 		BANK_TAGS,
 		INVENTORY_SETUPS
 	}
@@ -223,6 +252,88 @@ public interface GEFiltersConfig extends Config
 	default int filterHorizontalSpacing()
 	{
 		return 5;
+	}
+
+	@ConfigItem(
+			keyName = "clearRecentlyViewedList",
+			name = "Clear Recently Viewed (Popup)",
+			description = "Opens a confirmation popup, then clears Recently Viewed and resets this toggle. Max list cap is 500.",
+			warning = "Clear Recently Viewed now? This is immediate and cannot be undone.",
+			section = preferencesSection,
+			position = 14
+	)
+	default boolean clearRecentlyViewedList()
+	{
+		return false;
+	}
+
+	@Range(
+			max = 500,
+			min = 1
+	)
+	@ConfigItem(
+			keyName = "maxRecentlyViewedItems",
+			name = "Max Recently Viewed Items",
+			description = "Maximum number of items kept in Recently Viewed (1-500).",
+			section = preferencesSection,
+			position = 15
+	)
+	default int maxRecentlyViewedItems()
+	{
+		return 100;
+	}
+
+	@ConfigItem(
+			keyName = "recentlyViewedIgnoredItemIds",
+			name = "Ignored Recently Viewed Item IDs",
+			description = "Comma, space, or semicolon-separated item IDs to ignore when adding to Recently Viewed. Combined with ignored names.",
+			section = preferencesSection,
+			position = 16
+	)
+	default String recentlyViewedIgnoredItemIds()
+	{
+		return "";
+	}
+
+	@ConfigItem(
+			keyName = "recentlyViewedIgnoredItemNames",
+			name = "Ignored Recently Viewed Item Names",
+			description = "Comma, semicolon, or newline-separated item names to ignore when adding to Recently Viewed. Combined with ignored IDs.",
+			section = preferencesSection,
+			position = 17
+	)
+	default String recentlyViewedIgnoredItemNames()
+	{
+		return "";
+	}
+
+	@ConfigItem(
+			keyName = "clearPinnedItemsList",
+			name = "Clear Pinned Items (Popup)",
+			description = "Opens a confirmation popup, then clears Pinned Items and resets this toggle.",
+			warning = "Clear Pinned Items now? This is immediate and cannot be undone.",
+			section = preferencesSection,
+			position = 19
+	)
+	default boolean clearPinnedItemsList()
+	{
+		return false;
+	}
+
+	@Range(
+			max = 500,
+			min = 1
+	)
+	@ConfigItem(
+			keyName = "maxPinnedItems",
+			name = "Max Pinned Items",
+			description = "Maximum number of items kept in Pinned Items (1-500).",
+			section = preferencesSection,
+			position = 18
+	)
+	default int maxPinnedItems()
+	{
+		return 100;
 	}
 
 

@@ -3,17 +3,19 @@ package com.salverrs.GEFilters.Filters.Model;
 import net.runelite.api.widgets.Widget;
 
 public class GeSearchResultWidget {
-    private short itemId;
-    private Widget container;
-    private Widget title;
-    private Widget icon;
+    private final Widget container;
+    private final Widget title;
+    private final Widget icon;
+    private final int baseIconOriginalX;
+    private final int baseIconOriginalY;
 
-    public GeSearchResultWidget(Widget container, Widget title, Widget icon, short itemId)
+    public GeSearchResultWidget(Widget container, Widget title, Widget icon)
     {
         this.container = container;
         this.title = title;
         this.icon = icon;
-        this.itemId = itemId;
+        this.baseIconOriginalX = icon.getOriginalX();
+        this.baseIconOriginalY = icon.getOriginalY();
     }
 
     public void setTooltipText(String text)
@@ -40,8 +42,8 @@ public class GeSearchResultWidget {
 
     public void setSpriteOffset(int xOffset, int yOffset)
     {
-        icon.setOriginalX(icon.getOriginalX() + xOffset);
-        icon.setOriginalY(icon.getOriginalY() + yOffset);
+        icon.setOriginalX(baseIconOriginalX + xOffset);
+        icon.setOriginalY(baseIconOriginalY + yOffset);
         icon.revalidate();
     }
 
@@ -51,15 +53,16 @@ public class GeSearchResultWidget {
         icon.setWidthMode(0);
 
         icon.setOriginalHeight(height);
-        icon.setWidthMode(0);
+        icon.setHeightMode(0);
 
         icon.revalidate();
     }
 
     public void setItemIcon(short itemId)
     {
-        icon.setItemId(itemId);
-        icon.setSpriteId(itemId);
+        final int resolvedItemId = Short.toUnsignedInt(itemId);
+        icon.setItemId(resolvedItemId);
+        icon.setSpriteId(resolvedItemId);
         icon.revalidate();
     }
 

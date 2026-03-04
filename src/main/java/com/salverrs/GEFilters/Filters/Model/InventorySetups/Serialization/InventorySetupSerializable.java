@@ -26,14 +26,13 @@
 
 package com.salverrs.GEFilters.Filters.Model.InventorySetups.Serialization;
 
-import com.salverrs.GEFilters.Filters.Model.*;
+import com.google.common.base.Strings;
 import com.salverrs.GEFilters.Filters.Model.InventorySetups.InventorySetup;
 import com.salverrs.GEFilters.Filters.Model.InventorySetups.InventorySetupsItem;
-import joptsimple.internal.Strings;
 import lombok.Value;
 
 import javax.annotation.Nullable;
-import java.awt.*;
+import java.awt.Color;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -144,11 +143,12 @@ public class InventorySetupSerializable
         List<InventorySetupsItem> bp = convertListToInventorySetup(iss.getBp());
         List<InventorySetupsItem> qv = convertListToInventorySetup(iss.getQv());
         Map<Integer, InventorySetupsItem> afi = new HashMap<>();
-        if (iss.getAfi() != null)
+        final Map<Integer, InventorySetupItemSerializable> afiSerializable = iss.getAfi();
+        if (afiSerializable != null)
         {
-            for (final Integer key : iss.getAfi().keySet())
+            for (final Integer key : afiSerializable.keySet())
             {
-                afi.put(key, InventorySetupItemSerializable.convertToInventorySetupItem(iss.getAfi().get(key)));
+                afi.put(key, InventorySetupItemSerializable.convertToInventorySetupItem(afiSerializable.get(key)));
             }
         }
         String name = iss.getName();
@@ -158,9 +158,11 @@ public class InventorySetupSerializable
         Color dc = iss.getDc();
         boolean fb = iss.getFb() != null ? iss.getFb() : Boolean.FALSE;
         boolean uh = iss.getUh() != null ? iss.getUh() : Boolean.FALSE;
-        int sb = iss.getSb() != null ? iss.getSb() : 0;
+        final Integer sbValue = iss.getSb();
+        int sb = sbValue != null ? sbValue : 0;
         boolean fv = iss.getFv() != null ? iss.getFv() : Boolean.FALSE;
-        int iId = iss.getIId() != null ? iss.getIId() : -1;
+        final Integer iconIdValue = iss.getIId();
+        int iId = iconIdValue != null ? iconIdValue : -1;
 
         return new InventorySetup(inv, eq, rp, bp, qv, afi, name, notes, hc, hd, dc, fb, uh, sb, fv, iId);
     }

@@ -60,10 +60,11 @@ public class InventorySetupItemSerializableTypeAdapter extends TypeAdapter<Inven
                 out.name("f");
                 out.value(iss.getF());
             }
-            if (iss.getSc() != null)
+            final InventorySetupsStackCompareID stackCompare = iss.getSc();
+            if (stackCompare != null)
             {
                 out.name("sc");
-                out.value(iss.getSc().toString());
+                out.value(stackCompare.toString());
             }
             out.endObject();
         }
@@ -88,27 +89,41 @@ public class InventorySetupItemSerializableTypeAdapter extends TypeAdapter<Inven
         while (in.hasNext())
         {
             JsonToken token = in.peek();
-            if (token.equals(JsonToken.NAME))
+            if (!token.equals(JsonToken.NAME))
             {
-                //get the current token
-                String fieldName = in.nextName();
-                switch (fieldName)
-                {
-                    case "id":
-                        id = in.nextInt();
-                        break;
-                    case "q":
-                        q = in.nextInt();
-                        break;
-                    case "f":
-                        f = in.nextBoolean();
-                        break;
-                    case "sc":
-                        sc = InventorySetupsStackCompareID.valueOf(in.nextString());
-                        break;
-                    default:
-                        break;
-                }
+                in.skipValue();
+                continue;
+            }
+
+            // get the current token
+            String fieldName = in.nextName();
+            switch (fieldName)
+            {
+                case "id":
+                    id = in.nextInt();
+                    break;
+                case "q":
+                    q = in.nextInt();
+                    break;
+                case "f":
+                    f = in.nextBoolean();
+                    break;
+                case "sc":
+                    final String rawCompare = in.nextString();
+                    try
+                    {
+                        sc = InventorySetupsStackCompareID.valueOf(rawCompare);
+                    }
+                    catch (IllegalArgumentException ignored)
+                    {
+                        // Unknown enum values can appear when upstream plugins add options.
+                        // Treat as default/no compare so old data remains loadable.
+                        sc = InventorySetupsStackCompareID.None;
+                    }
+                    break;
+                default:
+                    in.skipValue();
+                    break;
             }
         }
 

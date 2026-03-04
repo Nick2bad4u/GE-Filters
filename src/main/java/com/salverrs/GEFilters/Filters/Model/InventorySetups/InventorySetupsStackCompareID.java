@@ -26,7 +26,7 @@
 
 package com.salverrs.GEFilters.Filters.Model.InventorySetups;
 
-import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
@@ -50,8 +50,7 @@ public enum InventorySetupsStackCompareID
 
     static
     {
-        VALUES = new ArrayList<>();
-        Collections.addAll(VALUES, InventorySetupsStackCompareID.values());
+        VALUES = Collections.unmodifiableList(Arrays.asList(InventorySetupsStackCompareID.values()));
     }
 
     InventorySetupsStackCompareID(int type)

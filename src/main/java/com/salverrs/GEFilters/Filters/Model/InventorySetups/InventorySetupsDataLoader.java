@@ -48,7 +48,7 @@ public class InventorySetupsDataLoader
 {
     public static final String CONFIG_GROUP = "inventorysetups";
     private final ConfigManager configManager;
-    private Gson gson;
+    private final Gson gson;
     public static final String CONFIG_KEY_SETUPS_V3_PREFIX = "setupsV3_";
     public static final String CONFIG_KEY_SETUPS_ORDER_V3 = "setupsOrderV3_";
 
@@ -56,8 +56,10 @@ public class InventorySetupsDataLoader
                                      final Gson gson)
     {
         this.configManager = manager;
-        this.gson = gson.newBuilder().registerTypeAdapter(long.class, new LongTypeAdapter()).create();
-        this.gson = gson.newBuilder().registerTypeAdapter(InventorySetupItemSerializable.class, new InventorySetupItemSerializableTypeAdapter()).create();
+        this.gson = gson.newBuilder()
+            .registerTypeAdapter(long.class, new LongTypeAdapter())
+            .registerTypeAdapter(InventorySetupItemSerializable.class, new InventorySetupItemSerializableTypeAdapter())
+            .create();
     }
 
     public List<InventorySetup> getSetups()
@@ -68,14 +70,25 @@ public class InventorySetupsDataLoader
     private InventorySetup loadV3Setup(String configKey)
     {
         final String storedData = configManager.getConfiguration(CONFIG_GROUP, configKey);
+        if (storedData == null || storedData.isEmpty())
+        {
+            return null;
+        }
+
         try
         {
-            return InventorySetupSerializable.convertToInventorySetup(gson.fromJson(storedData, InventorySetupSerializable.class));
+            final InventorySetupSerializable serializable = gson.fromJson(storedData, InventorySetupSerializable.class);
+            if (serializable == null)
+            {
+                return null;
+            }
+
+            return InventorySetupSerializable.convertToInventorySetup(serializable);
         }
-        catch (Exception e)
+        catch (RuntimeException e)
         {
             log.error(String.format("[Ge-filters/Inventory-Setups] Exception occurred while loading %s", configKey), e);
-            throw e;
+            return null;
         }
     }
 
@@ -83,13 +96,32 @@ public class InventorySetupsDataLoader
     {
         final String wholePrefix = ConfigManager.getWholeKey(CONFIG_GROUP, null, CONFIG_KEY_SETUPS_V3_PREFIX);
         final List<String> loadedSetupWholeKeys = configManager.getConfigurationKeys(wholePrefix);
+        if (loadedSetupWholeKeys == null || loadedSetupWholeKeys.isEmpty())
+        {
+            return new ArrayList<>();
+        }
+
         Set<String> loadedSetupKeys = loadedSetupWholeKeys.stream().map(
-                key -> key.substring(wholePrefix.length() - CONFIG_KEY_SETUPS_V3_PREFIX.length())
+            this::extractSetupConfigKeyFromWholeKey
         ).collect(Collectors.toSet());
 
         final String setupsOrderJson = configManager.getConfiguration(CONFIG_GROUP, CONFIG_KEY_SETUPS_ORDER_V3);
-        final String[] setupsOrderArray = gson.fromJson(setupsOrderJson, String[].class);
-        final List<String> setupsOrder = setupsOrderArray == null ? new ArrayList<>() : new ArrayList<>(Arrays.asList(setupsOrderArray));
+        final List<String> setupsOrder = new ArrayList<>();
+        if (setupsOrderJson != null && !setupsOrderJson.isEmpty())
+        {
+            try
+            {
+                final String[] setupsOrderArray = gson.fromJson(setupsOrderJson, String[].class);
+                if (setupsOrderArray != null)
+                {
+                    setupsOrder.addAll(Arrays.asList(setupsOrderArray));
+                }
+            }
+            catch (RuntimeException e)
+            {
+                log.warn("[Ge-filters/Inventory-Setups] Failed to parse setups order key {}, falling back to unordered load.", CONFIG_KEY_SETUPS_ORDER_V3, e);
+            }
+        }
 
         List<InventorySetup> loadedSetups = new ArrayList<>();
         for (final String configHash : setupsOrder)
@@ -98,7 +130,10 @@ public class InventorySetupsDataLoader
             if (loadedSetupKeys.remove(configKey))
             { // Handles if hash is present only in configOrder.
                 final InventorySetup setup = loadV3Setup(configKey);
-                loadedSetups.add(setup);
+                if (setup != null)
+                {
+                    loadedSetups.add(setup);
+                }
             }
         }
         for (final String configKey : loadedSetupKeys)
@@ -106,8 +141,22 @@ public class InventorySetupsDataLoader
             // Load any remaining setups not present in setupsOrder. Useful if updateConfig crashes midway.
             //log.info("Loading setup that was missing from Order key: " + configKey);
             final InventorySetup setup = loadV3Setup(configKey);
-            loadedSetups.add(setup);
+            if (setup != null)
+            {
+                loadedSetups.add(setup);
+            }
         }
         return loadedSetups;
+    }
+
+    private String extractSetupConfigKeyFromWholeKey(String wholeKey)
+    {
+        final String configKeyPrefix = CONFIG_GROUP + "." + CONFIG_KEY_SETUPS_V3_PREFIX;
+        if (wholeKey != null && wholeKey.startsWith(configKeyPrefix))
+        {
+            return wholeKey.substring(CONFIG_GROUP.length() + 1);
+        }
+
+        return wholeKey;
     }
 }

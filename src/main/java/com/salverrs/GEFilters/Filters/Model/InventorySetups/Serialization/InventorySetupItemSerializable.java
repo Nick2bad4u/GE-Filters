@@ -50,7 +50,10 @@ public class InventorySetupItemSerializable
         }
         Integer quantity = item.getQuantity() != 1 ? item.getQuantity() : null;
         Boolean fuzzy = item.isFuzzy() ? Boolean.TRUE : null;
-        InventorySetupsStackCompareID sc = item.getStackCompare() != InventorySetupsStackCompareID.None ? item.getStackCompare() : null;
+        final InventorySetupsStackCompareID stackCompare = item.getStackCompare();
+        InventorySetupsStackCompareID sc = (stackCompare != null && stackCompare != InventorySetupsStackCompareID.None)
+                ? stackCompare
+                : null;
         return new InventorySetupItemSerializable(item.getId(), quantity, fuzzy, sc);
     }
 
@@ -63,8 +66,12 @@ public class InventorySetupItemSerializable
         int id = is.getId();
         // Name is not saved in the serializable object. It must be obtained from the item manager at runtime
         String name = "";
-        int quantity = is.getQ() != null ? is.getQ() : 1;
-        boolean fuzzy = is.getF() != null ? is.getF() : Boolean.FALSE;
+        final Integer quantityValue = is.getQ();
+        int quantity = quantityValue != null ? quantityValue.intValue() : 1;
+
+        final Boolean fuzzyValue = is.getF();
+        boolean fuzzy = fuzzyValue != null ? fuzzyValue.booleanValue() : false;
+
         InventorySetupsStackCompareID sc = is.getSc() != null ? is.getSc() : InventorySetupsStackCompareID.None;
         return new InventorySetupsItem(id, name, quantity, fuzzy, sc);
     }

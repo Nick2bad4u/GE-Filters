@@ -5,8 +5,13 @@ import com.salverrs.GEFilters.Filters.Model.FilterOption;
 import com.salverrs.GEFilters.Filters.Model.GeSearch;
 import com.salverrs.GEFilters.Filters.Model.GeSearchResultWidget;
 import com.salverrs.GEFilters.GEFiltersPlugin;
-import net.runelite.api.*;
-import net.runelite.api.events.*;
+import net.runelite.api.GameState;
+import net.runelite.api.Menu;
+import net.runelite.api.MenuAction;
+import net.runelite.api.MenuEntry;
+import net.runelite.api.events.ClientTick;
+import net.runelite.api.events.WidgetClosed;
+import net.runelite.api.events.WidgetLoaded;
 import net.runelite.api.gameval.InterfaceID;
 import net.runelite.api.widgets.JavaScriptCallback;
 import net.runelite.api.widgets.Widget;
@@ -14,19 +19,25 @@ import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.plugins.banktags.BankTagsPlugin;
 import net.runelite.client.util.Text;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Locale;
 import java.util.function.Consumer;
+import java.util.regex.Pattern;
 
 import static net.runelite.http.api.RuneLiteAPI.GSON;
 
 public class BankTabSearchFilter extends SearchFilter {
 
-    private static final int SPRITE_ID_MAIN = SpriteID.MAP_ICON_BANK;
+    private static final int SPRITE_ID_MAIN = 1453; // SpriteID.MAP_ICON_BANK
+    private static final int FALLBACK_TAG_ICON_ITEM_ID = 952; // ItemID.SPADE
     private static final String TITLE_MAIN = "Bank Tags";
     private static final String SEARCH_BASE_MAIN = "bank-tags";
-    private static final String TAG_TAB_MENU_IDENTIFIER = "Export tag tab";
+    private static final String TAG_TAB_MENU_IDENTIFIER = "export tag tab";
     private static final String TAG_EXCEPTION_JSON_KEY = "bank-tags-exceptions";
     private static final int WIDGET_ID_CHATBOX_GE_SEARCH_RESULTS = InterfaceID.Chatbox.MES_LAYER_SCROLLCONTENTS;
+    private static final Pattern HTML_TAG_PATTERN = Pattern.compile("<[^>]*>");
     private boolean bankOpen = false;
     private FilterOption bankTabFilter;
     private List<String> tagExceptions = new ArrayList<>();
@@ -80,11 +91,27 @@ public class BankTabSearchFilter extends SearchFilter {
         if (client.getGameState() != GameState.LOGGED_IN || client.isMenuOpen())
             return;
 
+        final boolean bankWidgetOpen = client.getWidget(InterfaceID.BANKMAIN, 0) != null;
+        if (!bankOpen && bankWidgetOpen)
+        {
+            bankOpen = true;
+        }
+        else if (bankOpen && !bankWidgetOpen)
+        {
+            bankOpen = false;
+        }
+
         if (!bankOpen)
             return;
 
         final Menu menu = client.getMenu();
-        final List<MenuEntry> entries = new ArrayList<>(Arrays.asList(menu.getMenuEntries()));
+        final MenuEntry[] menuEntries = menu.getMenuEntries();
+        if (menuEntries == null || menuEntries.length == 0)
+        {
+            return;
+        }
+
+        final List<MenuEntry> entries = new ArrayList<>(Arrays.asList(menuEntries));
 
         String targetFormatted = null;
         String targetTag = null;
@@ -93,10 +120,16 @@ public class BankTabSearchFilter extends SearchFilter {
         for (MenuEntry entry : entries)
         {
             final String option = entry.getOption();
-            if (option.contains(TAG_TAB_MENU_IDENTIFIER))
+            if (option == null)
+            {
+                continue;
+            }
+
+            final String normalizedOption = normalizeMenuOption(option);
+            if (normalizedOption.startsWith(TAG_TAB_MENU_IDENTIFIER))
             {
                 final String entryTarget = entry.getTarget();
-                final String tagName = Text.removeTags(entry.getTarget()).replace("\u00a0"," ");
+                final String tagName = Text.removeTags(entryTarget == null ? "" : entryTarget).replace("\u00a0"," ");
                 isTagMenu = true;
                 targetFormatted = entryTarget;
                 targetTag = tagName;
@@ -106,6 +139,11 @@ public class BankTabSearchFilter extends SearchFilter {
 
         if (!isTagMenu)
             return;
+
+        if (targetTag == null || targetTag.isEmpty())
+        {
+            return;
+        }
 
         if (tagExceptions.contains(targetTag))
         {
@@ -137,8 +175,23 @@ public class BankTabSearchFilter extends SearchFilter {
                 continue;
 
             String iconItemId = configManager.getConfiguration(BankTagsPlugin.CONFIG_GROUP, BankTagsPlugin.TAG_ICON_PREFIX + tag);
-            iconItemId = iconItemId == null ? "" + ItemID.SPADE : iconItemId;
-            tagFilters.add(new GeSearch(tag, Short.parseShort(iconItemId)));
+            iconItemId = iconItemId == null ? Integer.toString(FALLBACK_TAG_ICON_ITEM_ID) : iconItemId;
+
+            short iconId = (short) FALLBACK_TAG_ICON_ITEM_ID;
+            try
+            {
+                final int parsedIconId = Integer.parseInt(iconItemId.trim());
+                if (parsedIconId > 0 && parsedIconId <= 0xFFFF)
+                {
+                    iconId = (short) parsedIconId;
+                }
+            }
+            catch (NumberFormatException ignored)
+            {
+                // Keep fallback spade icon for malformed persisted icon ids.
+            }
+
+            tagFilters.add(new GeSearch(tag, iconId));
         }
 
         setGESearchResults(getEmptySearchResults(tagFilters.size()));
@@ -187,22 +240,29 @@ public class BankTabSearchFilter extends SearchFilter {
     private List<GeSearchResultWidget> getGeSearchResults()
     {
         final List<GeSearchResultWidget> results = new ArrayList<>();
-        final Widget[] geSearchResultWidgets = Objects.requireNonNull(client.getWidget(WIDGET_ID_CHATBOX_GE_SEARCH_RESULTS)).getDynamicChildren();
-        final Queue<Widget> widgetQueue = new LinkedList<Widget>();
-
-        for (Widget w : geSearchResultWidgets)
+        final Widget searchResultsWidget = client.getWidget(WIDGET_ID_CHATBOX_GE_SEARCH_RESULTS);
+        if (searchResultsWidget == null)
         {
-            widgetQueue.add(w);
+            return results;
+        }
 
-            if (widgetQueue.size() == 3)
+        final Widget[] geSearchResultWidgets = searchResultsWidget.getDynamicChildren();
+        if (geSearchResultWidgets == null)
+        {
+            return results;
+        }
+
+        for (int i = 0; i + 2 < geSearchResultWidgets.length; i += 3)
+        {
+            final Widget container = geSearchResultWidgets[i];
+            final Widget title = geSearchResultWidgets[i + 1];
+            final Widget icon = geSearchResultWidgets[i + 2];
+            if (container == null || title == null || icon == null)
             {
-                final Widget container = widgetQueue.remove();
-                final Widget title = widgetQueue.remove();
-                final Widget icon = widgetQueue.remove();
-                final short itemId = (short)icon.getItemId();
-
-                results.add(new GeSearchResultWidget(container, title, icon, itemId));
+                continue;
             }
+
+            results.add(new GeSearchResultWidget(container, title, icon));
         }
 
         return results;
@@ -249,9 +309,21 @@ public class BankTabSearchFilter extends SearchFilter {
         }
         else
         {
-            final String[] tagExc = GSON.fromJson(tagExceptionsJson, String[].class);
-            tagExceptions = new ArrayList<>(Arrays.asList(tagExc));
+            try
+            {
+                final String[] tagExc = GSON.fromJson(tagExceptionsJson, String[].class);
+                tagExceptions = tagExc == null ? new ArrayList<>() : new ArrayList<>(Arrays.asList(tagExc));
+            }
+            catch (RuntimeException ignored)
+            {
+                tagExceptions = new ArrayList<>();
+            }
         }
+    }
+
+    private String normalizeMenuOption(String option)
+    {
+        return HTML_TAG_PATTERN.matcher(option).replaceAll("").trim().toLowerCase(Locale.ROOT);
     }
 
     private short[] getEmptySearchResults(int size)

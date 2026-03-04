@@ -3,10 +3,22 @@ package com.salverrs.GEFilters;
 import com.google.inject.Provides;
 import javax.inject.Inject;
 
-import com.salverrs.GEFilters.Filters.*;
+import com.salverrs.GEFilters.Filters.BankHighlighterSearchFilter;
+import com.salverrs.GEFilters.Filters.BankTabSearchFilter;
+import com.salverrs.GEFilters.Filters.InventorySearchFilter;
+import com.salverrs.GEFilters.Filters.InventorySetupsSearchFilter;
+import com.salverrs.GEFilters.Filters.PinnedItemsSearchFilter;
+import com.salverrs.GEFilters.Filters.RecentItemsSearchFilter;
+import com.salverrs.GEFilters.Filters.SearchFilter;
 import lombok.extern.slf4j.Slf4j;
-import net.runelite.api.*;
-import net.runelite.api.events.*;
+import net.runelite.api.Client;
+import net.runelite.api.GameState;
+import net.runelite.api.ScriptID;
+import net.runelite.api.events.ClientTick;
+import net.runelite.api.events.GameStateChanged;
+import net.runelite.api.events.ScriptPostFired;
+import net.runelite.api.events.WidgetClosed;
+import net.runelite.api.events.WidgetLoaded;
 import net.runelite.api.gameval.InterfaceID;
 import net.runelite.api.widgets.Widget;
 import net.runelite.client.callback.ClientThread;
@@ -23,6 +35,7 @@ import net.runelite.client.plugins.banktags.BankTagsPlugin;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.regex.Pattern;
 
 
 @Slf4j
@@ -37,9 +50,13 @@ public class GEFiltersPlugin extends Plugin
 {
 	public static final String CONFIG_GROUP = "GE_FILTERS_CONFIG";
 	public static final String CONFIG_GROUP_DATA = "GE_FILTERS_CONFIG_DATA";
+	private static final String CONFIG_KEY_CLEAR_RECENTLY_VIEWED = "clearRecentlyViewedList";
+	private static final String CONFIG_KEY_CLEAR_PINNED_ITEMS = "clearPinnedItemsList";
 	public static final String BANK_TAGS_COMP_NAME = "Bank Tags";
+	public static final String BANK_HIGHLIGHTER_COMP_NAME = "Bank Highlighter";
 	private static final String SEARCH_BUY_PREFIX_TEXT = "What would you like to buy?";
-	private static final String SEARCH_BUY_PREFIX_STRIP_REGEX = "^What would you like to buy\\?\\s*\\*?\\s*";
+	private static final Pattern SEARCH_BUY_PREFIX_PATTERN = Pattern.compile("^What would you like to buy\\?\\s*\\*?\\s*");
+	private static final Pattern HTML_TAG_PATTERN = Pattern.compile("<[^>]*>");
 	public static final String INVENTORY_SETUPS_COMP_NAME = "Inventory Setups";
 	private static final int WIDGET_ID_CHATBOX_GE_SEARCH_RESULTS = InterfaceID.Chatbox.MES_LAYER_SCROLLCONTENTS;
 	private static final int WIDGET_ID_CHATBOX_CONTAINER = InterfaceID.Chatbox.MES_LAYER;
@@ -50,15 +67,21 @@ public class GEFiltersPlugin extends Plugin
 	@Inject
 	private ClientThread clientThread;
 	@Inject
+	private ConfigManager configManager;
+	@Inject
 	private GEFiltersConfig config;
 	@Inject
 	private EventBus eventBus;
 	@Inject
 	private BankTabSearchFilter bankTabSearchFilter;
 	@Inject
+	private BankHighlighterSearchFilter bankHighlighterSearchFilter;
+	@Inject
 	private InventorySetupsSearchFilter inventorySetupsSearchFilter;
 	@Inject
 	private RecentItemsSearchFilter recentItemsSearchFilter;
+	@Inject
+	private PinnedItemsSearchFilter pinnedItemsSearchFilter;
 	@Inject
 	private InventorySearchFilter inventorySearchFilter;
 	@Inject
@@ -101,6 +124,19 @@ public class GEFiltersPlugin extends Plugin
 	@Subscribe
 	public void onScriptPostFired(ScriptPostFired event)
 	{
+		if (event.getScriptId() == ScriptID.MESSAGE_LAYER_CLOSE
+				|| event.getScriptId() == SEARCH_BOX_LOADED_ID
+				|| event.getScriptId() == ScriptID.CHAT_TEXT_INPUT_REBUILD)
+		{
+			log.info("[GEFDBG/Plugin] onScriptPostFired id={} filtersRunning={} geOpen={} searchVisible={} pendingAutoSelect={} autoSelectApplied={}",
+					event.getScriptId(),
+					filtersRunning,
+					grandExchangeInterfaceOpen,
+					isSearchVisible(),
+					pendingAutoSelectOnBuy,
+					autoSelectAppliedThisSearch);
+		}
+
 		// Chatbox message layer closed (eg. item selected or input cancelled). If we keep widgets around
 		// they can become detached/stale and won't reappear until the GE is re-opened.
 		if (event.getScriptId() == ScriptID.MESSAGE_LAYER_CLOSE)
@@ -153,6 +189,7 @@ public class GEFiltersPlugin extends Plugin
 	{
 		if (event.getGroupId() == InterfaceID.GE_OFFERS)
 		{
+			log.info("[GEFDBG/Plugin] onWidgetLoaded GE_OFFERS");
 			grandExchangeInterfaceOpen = true;
 			autoSelectAppliedThisSearch = false;
 			clientThread.invoke(this::tryStartFilters);
@@ -165,6 +202,7 @@ public class GEFiltersPlugin extends Plugin
 	{
 		if (event.getGroupId() == InterfaceID.GE_OFFERS)
 		{
+			log.info("[GEFDBG/Plugin] onWidgetClosed GE_OFFERS");
 			grandExchangeInterfaceOpen = false;
 			autoSelectAppliedThisSearch = false;
 			clientThread.invoke(this::hideFilters);
@@ -183,8 +221,41 @@ public class GEFiltersPlugin extends Plugin
 	@Subscribe
 	public void onConfigChanged(ConfigChanged configChanged)
 	{
-		if (!configChanged.getGroup().equals(GEFiltersPlugin.CONFIG_GROUP))
+		if (!GEFiltersPlugin.CONFIG_GROUP.equals(configChanged.getGroup()))
 			return;
+
+		log.info("[GEFDBG/Plugin] onConfigChanged key={} oldValue={} newValue={}",
+				configChanged.getKey(),
+				configChanged.getOldValue(),
+				configChanged.getNewValue());
+
+		if (CONFIG_KEY_CLEAR_RECENTLY_VIEWED.equals(configChanged.getKey()))
+		{
+			if (config.clearRecentlyViewedList())
+			{
+				clientThread.invoke(() ->
+				{
+					recentItemsSearchFilter.clearRecentlyViewedItems();
+					configManager.setConfiguration(CONFIG_GROUP, CONFIG_KEY_CLEAR_RECENTLY_VIEWED, false);
+				});
+			}
+
+			return;
+		}
+
+		if (CONFIG_KEY_CLEAR_PINNED_ITEMS.equals(configChanged.getKey()))
+		{
+			if (config.clearPinnedItemsList())
+			{
+				clientThread.invoke(() ->
+				{
+					recentItemsSearchFilter.clearPinnedItems();
+					configManager.setConfiguration(CONFIG_GROUP, CONFIG_KEY_CLEAR_PINNED_ITEMS, false);
+				});
+			}
+
+			return;
+		}
 
 		clientThread.invoke(() ->
 		{
@@ -196,6 +267,14 @@ public class GEFiltersPlugin extends Plugin
 
 	private void loadFilters()
 	{
+		log.info("[GEFDBG/Plugin] loadFilters begin cfg: bankTags={} invSetups={} inventory={} bankHighlighter={} recent={} pinned={}",
+				config.enableBankTagFilter(),
+				config.enableInventorySetupsFilter(),
+				config.enableInventoryFilter(),
+				config.enableBankHighlighterFilter(),
+				config.enableRecentItemsFilter(),
+				config.enablePinnedItemsFilter());
+
 		filters = new ArrayList<>();
 
 		if (config.enableBankTagFilter() && isPluginEnabled(BANK_TAGS_COMP_NAME))
@@ -213,37 +292,73 @@ public class GEFiltersPlugin extends Plugin
 			filters.add(inventorySearchFilter);
 		}
 
+		if (config.enableBankHighlighterFilter() && isPluginEnabled(BANK_HIGHLIGHTER_COMP_NAME))
+		{
+			filters.add(bankHighlighterSearchFilter);
+		}
+
 		if (config.enableRecentItemsFilter())
 		{
 			filters.add(recentItemsSearchFilter);
 		}
+
+		if (config.enablePinnedItemsFilter())
+		{
+			filters.add(pinnedItemsSearchFilter);
+		}
+
+		log.info("[GEFDBG/Plugin] loadFilters selected count={} filters={}", filters.size(), describeFilters(filters));
 
 		registerFilterEvents();
 	}
 
 	private void tryStartFilters()
 	{
+		log.info("[GEFDBG/Plugin] tryStartFilters begin filtersRunning={} geOpen={} searchVisible={} filtersCount={} filters={}",
+				filtersRunning,
+				grandExchangeInterfaceOpen,
+				isSearchVisible(),
+				filters != null ? filters.size() : 0,
+				describeFilters(filters));
+
 		// If the plugin is enabled while the GE is already open we may not receive WidgetLoaded.
 		// Infer state from the presence of the GE root widget.
 		if (!grandExchangeInterfaceOpen && client.getWidget(InterfaceID.GE_OFFERS, 0) != null)
 		{
 			grandExchangeInterfaceOpen = true;
+			log.info("[GEFDBG/Plugin] tryStartFilters inferred geOpen=true from widget presence");
+		}
+
+		// The GE search chatbox can be reused by other interfaces.
+		// Only initialize filters while the GE offers interface is open.
+		if (!grandExchangeInterfaceOpen)
+		{
+			log.info("[GEFDBG/Plugin] tryStartFilters skipped: ge interface not open");
+			return;
 		}
 
 		// If something went wrong with teardown (missed close event), don't get stuck forever.
 		if (filtersRunning && !isSearchVisible())
 		{
-			filtersRunning = false;
+			log.info("[GEFDBG/Plugin] tryStartFilters forcing hide: filtersRunning while search not visible");
+			hideFilters();
+			return;
 		}
 
 		if (filtersRunning)
 		{
+			log.info("[GEFDBG/Plugin] tryStartFilters skipped: already running");
 			return;
 		}
 
 		if (isSearchVisible())
 		{
+			log.info("[GEFDBG/Plugin] tryStartFilters starting filters");
 			startFilters();
+		}
+		else
+		{
+			log.info("[GEFDBG/Plugin] tryStartFilters skipped: search not visible");
 		}
 	}
 
@@ -273,8 +388,8 @@ public class GEFiltersPlugin extends Plugin
 		}
 
 		final String text = input.getText();
-		final String normalized = text == null ? "" : text.replaceAll("<[^>]*>", "").trim();
-		final String stripped = normalized.replaceFirst(SEARCH_BUY_PREFIX_STRIP_REGEX, "");
+		final String normalized = normalizeChatboxText(text);
+		final String stripped = SEARCH_BUY_PREFIX_PATTERN.matcher(normalized).replaceFirst("");
 		if (!stripped.equals(normalized))
 		{
 			input.setText(stripped);
@@ -301,15 +416,30 @@ public class GEFiltersPlugin extends Plugin
 		}
 
 		final String text = input.getText();
-		final String normalized = text == null ? "" : text.replaceAll("<[^>]*>", "").trim();
+		final String normalized = normalizeChatboxText(text);
 		return normalized.startsWith(SEARCH_BUY_PREFIX_TEXT);
+	}
+
+	private String normalizeChatboxText(String text)
+	{
+		if (text == null || text.isEmpty())
+		{
+			return "";
+		}
+
+		return HTML_TAG_PATTERN.matcher(text).replaceAll("").trim();
 	}
 
 	private void autoSelectConfiguredFilterOnBuy()
 	{
+		final boolean inventorySetupsAvailable = config.enableInventorySetupsFilter()
+				&& isPluginEnabled(INVENTORY_SETUPS_COMP_NAME);
+
 		// User-requested precedence: if both global auto-select and Inventory Setups auto-enter are enabled,
 		// Inventory Setups should win.
-		if (config.invSetupsAutoSelectActiveSetup() && config.autoSelectFilterOnBuy() != GEFiltersConfig.AutoSelectFilterOnBuyMode.OFF)
+		if (inventorySetupsAvailable
+				&& config.invSetupsAutoSelectActiveSetup()
+				&& config.autoSelectFilterOnBuy() != GEFiltersConfig.AutoSelectFilterOnBuyMode.OFF)
 		{
 			inventorySetupsSearchFilter.autoEnablePrimaryFilterOption();
 			return;
@@ -322,6 +452,9 @@ public class GEFiltersPlugin extends Plugin
 				break;
 			case RECENT_ITEMS:
 				recentItemsSearchFilter.autoEnablePrimaryFilterOption();
+				break;
+			case PINNED_ITEMS:
+				pinnedItemsSearchFilter.autoEnablePrimaryFilterOption();
 				break;
 			case BANK_TAGS:
 				bankTabSearchFilter.autoEnablePrimaryFilterOption();
@@ -337,6 +470,15 @@ public class GEFiltersPlugin extends Plugin
 
 	private void startFilters()
 	{
+		if (filters == null || filters.isEmpty())
+		{
+			log.info("[GEFDBG/Plugin] startFilters aborted: no filters loaded");
+			filtersRunning = false;
+			pendingAutoSelectOnBuy = false;
+			autoSelectAppliedThisSearch = false;
+			return;
+		}
+
 		filtersRunning = true;
 		final int buttonWidth = SearchFilter.getConfiguredButtonWidth(config);
 		final int horizontalSpacing = buttonWidth + config.filterHorizontalSpacing();
@@ -372,8 +514,22 @@ public class GEFiltersPlugin extends Plugin
 				xOffset = Math.max(0, containerWidth - buttonWidth - (rightIndex * horizontalSpacing));
 			}
 
-			filters.get(i).start(xOffset, 0);
+			final SearchFilter filter = filters.get(i);
+			log.info("[GEFDBG/Plugin] startFilters starting {} at xOffset={} index={} bothSides={}",
+					filter != null ? filter.getClass().getSimpleName() : "<null>",
+					xOffset,
+					i,
+					bothSides);
+			if (filter != null)
+			{
+				filter.start(xOffset, 0);
+			}
 		}
+
+		log.info("[GEFDBG/Plugin] startFilters complete filtersRunning={} pendingAutoSelect={} autoSelectApplied={}",
+				filtersRunning,
+				pendingAutoSelectOnBuy,
+				autoSelectAppliedThisSearch);
 
 		if (pendingAutoSelectOnBuy)
 		{
@@ -385,11 +541,15 @@ public class GEFiltersPlugin extends Plugin
 
 	private void stopFilters()
 	{
+		log.info("[GEFDBG/Plugin] stopFilters begin filtersCount={} filters={}",
+				filters != null ? filters.size() : 0,
+				describeFilters(filters));
 		filtersRunning = false;
 		pendingAutoSelectOnBuy = false;
 		autoSelectAppliedThisSearch = false;
 		hideFilters();
 		unregisterFilterEvents();
+		log.info("[GEFDBG/Plugin] stopFilters complete");
 	}
 
 	/**
@@ -400,6 +560,9 @@ public class GEFiltersPlugin extends Plugin
 	 */
 	private void hideFilters()
 	{
+		log.info("[GEFDBG/Plugin] hideFilters begin filtersCount={} filters={}",
+				filters != null ? filters.size() : 0,
+				describeFilters(filters));
 		filtersRunning = false;
 		pendingAutoSelectOnBuy = false;
 		autoSelectAppliedThisSearch = false;
@@ -411,12 +574,24 @@ public class GEFiltersPlugin extends Plugin
 
 		for (SearchFilter filter : filters)
 		{
-			filter.stop();
+			if (filter != null)
+			{
+				log.info("[GEFDBG/Plugin] hideFilters stopping {}", filter.getClass().getSimpleName());
+				filter.stop();
+			}
 		}
+
+		log.info("[GEFDBG/Plugin] hideFilters complete");
 	}
 
 	private void registerFilterEvents()
 	{
+		if (filters == null || filters.isEmpty())
+		{
+			log.info("[GEFDBG/Plugin] registerFilterEvents skipped: no filters");
+			return;
+		}
+
 		for (SearchFilter filter : filters)
 		{
 			if (filter == null)
@@ -424,12 +599,19 @@ public class GEFiltersPlugin extends Plugin
 				continue;
 			}
 
+			log.info("[GEFDBG/Plugin] registerFilterEvents {}", filter.getClass().getSimpleName());
 			eventBus.register(filter);
 		}
 	}
 
 	private void unregisterFilterEvents()
 	{
+		if (filters == null || filters.isEmpty())
+		{
+			log.info("[GEFDBG/Plugin] unregisterFilterEvents skipped: no filters");
+			return;
+		}
+
 		for (SearchFilter filter : filters)
 		{
 			if (filter == null)
@@ -437,8 +619,25 @@ public class GEFiltersPlugin extends Plugin
 				continue;
 			}
 
+			log.info("[GEFDBG/Plugin] unregisterFilterEvents {}", filter.getClass().getSimpleName());
 			eventBus.unregister(filter);
 		}
+	}
+
+	private String describeFilters(List<SearchFilter> filterList)
+	{
+		if (filterList == null || filterList.isEmpty())
+		{
+			return "[]";
+		}
+
+		final List<String> names = new ArrayList<>();
+		for (SearchFilter filter : filterList)
+		{
+			names.add(filter == null ? "<null>" : filter.getClass().getSimpleName());
+		}
+
+		return names.toString();
 	}
 
 	private boolean isPluginEnabled(String pluginName)

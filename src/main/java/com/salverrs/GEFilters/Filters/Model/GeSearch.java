@@ -1,13 +1,11 @@
 package com.salverrs.GEFilters.Filters.Model;
 
 import lombok.Getter;
-import lombok.Setter;
 
 @Getter
-@Setter
 public class GeSearch {
-    private String name;
-    private short iconItemId;
+    private final String name;
+    private final short iconItemId;
 
     public GeSearch(String name, short iconItemId)
     {

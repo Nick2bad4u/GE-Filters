@@ -1,0 +1,15 @@
+{
+	"hooks": {
+		"Stop": [
+			{
+				"type": "command",
+				"command": "echo copy-to-runtime hook is configured for Windows via the 'windows' override.",
+				"windows": "pwsh -NoProfile -ExecutionPolicy Bypass -File .github/hooks/copy-to-runtime.ps1",
+				"timeout": 120,
+				"env": {
+					"GEFILTERS_RUNTIME_ROOT": "C:\\Users\\Nick\\Dropbox\\Runescape\\IntelljProjectsRunelite\\runelitedevNEW\\runelite-client"
+				}
+			}
+		]
+	}
+}

@@ -68,14 +68,12 @@ public class PinnedItemsSearchFilter extends SearchFilter
     @Override
     protected void onFilterEnabled(FilterOption option)
     {
-        log.info("[GEFDBG/Pinned] onFilterEnabled optionTitle='{}' search='{}'", option != null ? option.getTitle() : "<null>", option != null ? option.getSearchValue() : "<null>");
         refreshPinnedResults();
     }
 
     private void refreshPinnedResults()
     {
         displayedPinnedItemIds = recentItemsSearchFilter.getPinnedItemsSnapshot();
-        log.info("[GEFDBG/Pinned] refreshPinnedResults displayedCount={}", displayedPinnedItemIds.size());
         addItemFilterResults(displayedPinnedItemIds);
     }
 
@@ -85,37 +83,27 @@ public class PinnedItemsSearchFilter extends SearchFilter
         // Avoid duplicate pin/unpin entries when RecentItemsSearchFilter is active.
         if (config.enableRecentItemsFilter())
         {
-            log.info("[GEFDBG/Pinned] onMenuOpened skipped: recent filter enabled");
             return;
         }
 
         if (!config.enablePinnedItemsFilter())
         {
-            log.info("[GEFDBG/Pinned] onMenuOpened skipped: pinned filter disabled");
             return;
         }
 
         if (!isGrandExchangeOpen() || !isGeSearchResultsOpen())
         {
-            log.info("[GEFDBG/Pinned] onMenuOpened skipped: geOpen={} geResultsOpen={}", isGrandExchangeOpen(), isGeSearchResultsOpen());
             return;
         }
 
         final MenuEntry[] entries = event.getMenuEntries();
         if (entries == null || entries.length == 0)
         {
-            log.info("[GEFDBG/Pinned] onMenuOpened skipped: no menu entries");
             return;
         }
 
         final String currentSearch = client.getVarcStrValue(VarClientID.MESLAYERINPUT);
         final boolean onPinnedItems = SEARCH_BASE_PINNED_ITEMS.equals(currentSearch);
-
-        log.info("[GEFDBG/Pinned] onMenuOpened currentSearch='{}' onPinnedItems={} entries={} displayedPinnedCount={}",
-                currentSearch,
-                onPinnedItems,
-                entries.length,
-                displayedPinnedItemIds.size());
 
         final Set<Integer> seenItemIds = new HashSet<>();
         for (int idx = entries.length - 1; idx >= 0; --idx)
@@ -141,50 +129,29 @@ public class PinnedItemsSearchFilter extends SearchFilter
             final int rowIndex = entry.getParam0();
 
             int itemId = -1;
-            String resolvedFrom = "none";
             if (onPinnedItems)
             {
                 itemId = resolveItemIdFromDisplayedResultsByTarget(displayedPinnedItemIds, entry.getTarget());
-                if (itemId > 0)
-                {
-                    resolvedFrom = "pinned-target";
-                }
 
                 if (itemId <= 0)
                 {
                     itemId = resolveItemIdFromDisplayedResults(displayedPinnedItemIds, rowIndex);
-                }
-                if (itemId > 0)
-                {
-                    resolvedFrom = "none".equals(resolvedFrom) ? "pinned-row" : resolvedFrom;
                 }
             }
 
             if (itemId <= 0)
             {
                 itemId = resolveMenuEntryItemId(entry);
-                if (itemId > 0)
-                {
-                    resolvedFrom = "entry-item";
-                }
             }
 
             if (itemId <= 0)
             {
                 itemId = resolveActiveFilterItemId(entry.getTarget(), rowIndex);
-                if (itemId > 0)
-                {
-                    resolvedFrom = "active-filter";
-                }
             }
 
             if (itemId <= 0)
             {
                 itemId = resolveItemIdFromTargetLookup(entry.getTarget());
-                if (itemId > 0)
-                {
-                    resolvedFrom = "target-lookup";
-                }
             }
 
             if (itemId <= 0 || itemId > MAX_STORED_ITEM_ID || !seenItemIds.add(itemId))
@@ -195,18 +162,6 @@ public class PinnedItemsSearchFilter extends SearchFilter
             final int resolvedItemId = itemId;
             final boolean isPinned = recentItemsSearchFilter.isItemPinned(resolvedItemId);
             final String action = isPinned ? MENU_OPTION_UNPIN : MENU_OPTION_PIN;
-                final Widget entryWidget = entry.getWidget();
-                final int entryWidgetItemId = entryWidget != null ? entryWidget.getItemId() : -1;
-
-                log.info("[GEFDBG/Pinned] menuInject action='{}' rowIndex={} resolvedItemId={} resolvedFrom={} entryItemId={} entryWidgetItemId={} entryIdentifier={} target='{}'",
-                    action,
-                    rowIndex,
-                    resolvedItemId,
-                    resolvedFrom,
-                    entry.getItemId(),
-                    entryWidgetItemId,
-                    entry.getIdentifier(),
-                    entry.getTarget());
 
             final Menu menu = client.getMenu();
             menu.createMenuEntry(-1)
@@ -216,8 +171,6 @@ public class PinnedItemsSearchFilter extends SearchFilter
                     .setItemId(resolvedItemId)
                     .onClick(e ->
                     {
-                        final boolean wasPinned = recentItemsSearchFilter.isItemPinned(resolvedItemId);
-
                         if (recentItemsSearchFilter.isItemPinned(resolvedItemId))
                         {
                             recentItemsSearchFilter.unpinItem(resolvedItemId);
@@ -228,13 +181,6 @@ public class PinnedItemsSearchFilter extends SearchFilter
                         }
 
                         refreshPinnedResultsIfActive();
-
-                        log.info("[GEFDBG/Pinned] menuClick resolvedItemId={} wasPinned={} nowPinned={} currentSearch='{}' displayedPinnedCount={}",
-                                resolvedItemId,
-                                wasPinned,
-                                recentItemsSearchFilter.isItemPinned(resolvedItemId),
-                                client.getVarcStrValue(VarClientID.MESLAYERINPUT),
-                                displayedPinnedItemIds.size());
                     });
         }
     }

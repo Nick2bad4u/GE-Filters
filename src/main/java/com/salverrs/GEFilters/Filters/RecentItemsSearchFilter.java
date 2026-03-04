@@ -77,6 +77,7 @@ public class RecentItemsSearchFilter extends SearchFilter {
     private String cachedIgnoredNamesRaw;
     private Set<String> cachedIgnoredItemNames = new HashSet<>();
     private final Map<Integer, String> normalizedItemNameCache = new HashMap<>();
+    private int suppressedCurrentRecentlyViewedItemId = -1;
 
     private void ensureRecentListsLoaded()
     {
@@ -117,12 +118,6 @@ public class RecentItemsSearchFilter extends SearchFilter {
 
         setFilterOptions(recentlyViewed, recentBuyOffers, recentSellOffers);
         setIconSprite(SPRITE_ID_MAIN, 0);
-
-        log.info("[GEFDBG/Recent] onFilterInitialising recentCount={} pinnedCount={} buyCount={} sellCount={}",
-            recentItemIds != null ? recentItemIds.size() : -1,
-            pinnedItemIds != null ? pinnedItemIds.size() : -1,
-            recentBuyOffersItemIds != null ? recentBuyOffersItemIds.size() : -1,
-            recentSellOffersItemIds != null ? recentSellOffersItemIds.size() : -1);
     }
 
     @Override
@@ -131,23 +126,11 @@ public class RecentItemsSearchFilter extends SearchFilter {
         ensureRecentListsLoaded();
         enforceRecentViewedConstraints();
         enforcePinnedConstraints();
-        log.info("[GEFDBG/Recent] onFilterStarted recentCount={} pinnedCount={} displayedRecentCount={}",
-                recentItemIds.size(),
-                pinnedItemIds.size(),
-                displayedRecentlyViewedItemIds.size());
     }
 
     @Override
     protected void onFilterEnabled(FilterOption option)
     {
-        log.info("[GEFDBG/Recent] onFilterEnabled optionTitle='{}' search='{}' recentCount={} pinnedCount={} buyCount={} sellCount={}",
-                option != null ? option.getTitle() : "<null>",
-                option != null ? option.getSearchValue() : "<null>",
-                recentItemIds != null ? recentItemIds.size() : -1,
-                pinnedItemIds != null ? pinnedItemIds.size() : -1,
-                recentBuyOffersItemIds != null ? recentBuyOffersItemIds.size() : -1,
-                recentSellOffersItemIds != null ? recentSellOffersItemIds.size() : -1);
-
         if (option == recentlyViewed)
         {
             final ArrayList<Short> displayed = getRecentlyViewedItemsWithCurrent();
@@ -248,14 +231,6 @@ public class RecentItemsSearchFilter extends SearchFilter {
             itemId = client.getVarpValue(VARP_CURRENT_GE_ITEM);
         }
 
-        log.info("[GEFDBG/Recent] onMenuOptionClicked option='{}' rowIndex={} resolvedItemId={} eventItemId={} varpCurrent={} currentSearch='{}'",
-                normalizedOption,
-                event.getParam0(),
-                itemId,
-                event.getItemId(),
-                client.getVarpValue(VARP_CURRENT_GE_ITEM),
-                client.getVarcStrValue(VarClientID.MESLAYERINPUT));
-
         addRecentViewedItem(itemId);
     }
 
@@ -269,29 +244,22 @@ public class RecentItemsSearchFilter extends SearchFilter {
             return;
         }
 
-        if (!config.enablePinnedItemsFilter())
-        {
-            return;
-        }
-
         final String currentSearch = client.getVarcStrValue(VarClientID.MESLAYERINPUT);
         final boolean onRecentlyViewed = SEARCH_BASE_RECENTLY_VIEWED.equals(currentSearch);
         final boolean onPinnedItems = SEARCH_BASE_PINNED_ITEMS.equals(currentSearch);
+        final boolean pinnedActionsEnabled = config.enablePinnedItemsFilter();
+
+        // Keep manual removal available in Recently Viewed even if pinned actions are disabled.
+        if (!pinnedActionsEnabled && !onRecentlyViewed)
+        {
+            return;
+        }
 
         final MenuEntry[] entries = event.getMenuEntries();
         if (entries == null || entries.length == 0)
         {
             return;
         }
-
-        log.info("[GEFDBG/Recent] onMenuOpened currentSearch='{}' onRecent={} onPinned={} entries={} recentCount={} pinnedCount={} displayedRecentCount={}",
-            currentSearch,
-            onRecentlyViewed,
-            onPinnedItems,
-            entries.length,
-            recentItemIds.size(),
-            pinnedItemIds.size(),
-            displayedRecentlyViewedItemIds.size());
 
         final Set<Integer> seenItemIds = new HashSet<>();
         for (int idx = entries.length - 1; idx >= 0; --idx)
@@ -401,22 +369,10 @@ public class RecentItemsSearchFilter extends SearchFilter {
             final short shortId = (short) resolvedItemId;
             final boolean isPinned = pinnedItemIds != null && pinnedItemIds.contains(shortId);
             final String action = isPinned ? MENU_OPTION_UNPIN : MENU_OPTION_PIN;
-                final Widget entryWidget = entry.getWidget();
-                final int entryWidgetItemId = entryWidget != null ? entryWidget.getItemId() : -1;
-
-                log.info("[GEFDBG/Recent] menuInject action='{}' rowIndex={} resolvedItemId={} resolvedFrom={} entryItemId={} entryWidgetItemId={} entryIdentifier={} target='{}'",
-                    action,
-                    rowIndex,
-                    resolvedItemId,
-                    resolvedFrom,
-                    entry.getItemId(),
-                    entryWidgetItemId,
-                    entry.getIdentifier(),
-                    entry.getTarget());
 
             final Menu menu = client.getMenu();
-                if (onRecentlyViewed)
-                {
+            if (onRecentlyViewed)
+            {
                 menu.createMenuEntry(-1)
                     .setOption(MENU_OPTION_REMOVE_RECENT)
                     .setTarget(entry.getTarget())
@@ -424,44 +380,29 @@ public class RecentItemsSearchFilter extends SearchFilter {
                     .setItemId(resolvedItemId)
                     .onClick(e ->
                     {
-                        final int recentCountBefore = recentItemIds != null ? recentItemIds.size() : -1;
                         removeRecentlyViewedItem(resolvedItemId);
-
-                        log.info("[GEFDBG/Recent] removeRecentClick resolvedItemId={} recentCountBefore={} recentCountAfter={} currentSearch='{}'",
-                            resolvedItemId,
-                            recentCountBefore,
-                            recentItemIds != null ? recentItemIds.size() : -1,
-                            client.getVarcStrValue(VarClientID.MESLAYERINPUT));
                     });
-                }
+            }
 
-            menu.createMenuEntry(-1)
-                    .setOption(action)
-                    .setTarget(entry.getTarget())
-                    .setType(MenuAction.RUNELITE)
-                    .setItemId(resolvedItemId)
-                    .onClick(e ->
-                    {
-                        final boolean wasPinned = isItemPinned(resolvedItemId);
-                        final int pinnedCountBefore = pinnedItemIds != null ? pinnedItemIds.size() : -1;
-
-                        if (isItemPinned(resolvedItemId))
+            if (pinnedActionsEnabled)
+            {
+                menu.createMenuEntry(-1)
+                        .setOption(action)
+                        .setTarget(entry.getTarget())
+                        .setType(MenuAction.RUNELITE)
+                        .setItemId(resolvedItemId)
+                        .onClick(e ->
                         {
-                            unpinRecentlyViewedItem(resolvedItemId);
-                        }
-                        else
-                        {
-                            pinRecentlyViewedItem(resolvedItemId);
-                        }
-
-                        log.info("[GEFDBG/Recent] menuClick resolvedItemId={} actionWasPinned={} actionNowPinned={} pinnedCountBefore={} pinnedCountAfter={} currentSearch='{}'",
-                                resolvedItemId,
-                                wasPinned,
-                                isItemPinned(resolvedItemId),
-                                pinnedCountBefore,
-                                pinnedItemIds != null ? pinnedItemIds.size() : -1,
-                                client.getVarcStrValue(VarClientID.MESLAYERINPUT));
-                    });
+                            if (isItemPinned(resolvedItemId))
+                            {
+                                unpinRecentlyViewedItem(resolvedItemId);
+                            }
+                            else
+                            {
+                                pinRecentlyViewedItem(resolvedItemId);
+                            }
+                        });
+            }
         }
     }
 
@@ -499,6 +440,10 @@ public class RecentItemsSearchFilter extends SearchFilter {
             return;
 
         appendToIdList(recentItemIds, (short)itemId, getConfiguredRecentViewedMaxCount());
+        if (suppressedCurrentRecentlyViewedItemId == itemId)
+        {
+            suppressedCurrentRecentlyViewedItemId = -1;
+        }
         saveRecentItems();
 
         refreshRecentlyViewedResultsIfActive();
@@ -508,7 +453,15 @@ public class RecentItemsSearchFilter extends SearchFilter {
     {
         final ArrayList<Short> items = new ArrayList<>(recentItemIds);
         final int currentItemId = client.getVarpValue(VARP_CURRENT_GE_ITEM);
-        if (currentItemId > 0 && currentItemId <= MAX_STORED_ITEM_ID && !isIgnoredRecentlyViewedItem(currentItemId))
+        if (suppressedCurrentRecentlyViewedItemId != -1 && currentItemId != suppressedCurrentRecentlyViewedItemId)
+        {
+            suppressedCurrentRecentlyViewedItemId = -1;
+        }
+
+        if (currentItemId > 0
+                && currentItemId <= MAX_STORED_ITEM_ID
+                && currentItemId != suppressedCurrentRecentlyViewedItemId
+                && !isIgnoredRecentlyViewedItem(currentItemId))
         {
             final short currentId = (short)currentItemId;
             items.remove((Short)currentId);
@@ -548,6 +501,7 @@ public class RecentItemsSearchFilter extends SearchFilter {
         }
 
         displayedRecentlyViewedItemIds = new ArrayList<>();
+        suppressedCurrentRecentlyViewedItemId = -1;
 
         refreshRecentlyViewedResultsIfActive();
     }
@@ -569,36 +523,25 @@ public class RecentItemsSearchFilter extends SearchFilter {
     {
         if (itemId <= 0 || itemId > MAX_STORED_ITEM_ID)
         {
-            log.info("[GEFDBG/Recent] pinRecentlyViewedItem skipped invalidItemId={}", itemId);
             return;
         }
 
         ensureRecentListsLoaded();
 
-        final int before = pinnedItemIds.size();
-
         appendToIdList(pinnedItemIds, (short) itemId, getConfiguredPinnedMaxCount());
         savePinnedItems();
         refreshPinnedResultsIfActive();
-
-        log.info("[GEFDBG/Recent] pinRecentlyViewedItem itemId={} beforeCount={} afterCount={} isPinnedNow={}",
-                itemId,
-                before,
-                pinnedItemIds.size(),
-                isItemPinned(itemId));
     }
 
     private void unpinRecentlyViewedItem(int itemId)
     {
         if (itemId <= 0 || itemId > MAX_STORED_ITEM_ID)
         {
-            log.info("[GEFDBG/Recent] unpinRecentlyViewedItem skipped invalidItemId={}", itemId);
             return;
         }
 
         ensureRecentListsLoaded();
 
-        final int before = pinnedItemIds.size();
         final boolean removed = pinnedItemIds.remove((Short) (short) itemId);
 
         if (removed)
@@ -606,31 +549,27 @@ public class RecentItemsSearchFilter extends SearchFilter {
             savePinnedItems();
             refreshPinnedResultsIfActive();
         }
-
-        log.info("[GEFDBG/Recent] unpinRecentlyViewedItem itemId={} removed={} beforeCount={} afterCount={} isPinnedNow={}",
-                itemId,
-                removed,
-                before,
-                pinnedItemIds.size(),
-                isItemPinned(itemId));
     }
 
     private void removeRecentlyViewedItem(int itemId)
     {
         if (itemId <= 0 || itemId > MAX_STORED_ITEM_ID)
         {
-            log.info("[GEFDBG/Recent] removeRecentlyViewedItem skipped invalidItemId={}", itemId);
             return;
         }
 
         ensureRecentListsLoaded();
 
-        final int before = recentItemIds.size();
         final boolean removed = recentItemIds.remove((Short) (short) itemId);
         displayedRecentlyViewedItemIds.remove((Short) (short) itemId);
 
         if (removed)
         {
+            if (client.getVarpValue(VARP_CURRENT_GE_ITEM) == itemId)
+            {
+                suppressedCurrentRecentlyViewedItemId = itemId;
+            }
+
             saveRecentItems();
             refreshRecentlyViewedResultsIfActive();
 
@@ -639,13 +578,6 @@ public class RecentItemsSearchFilter extends SearchFilter {
                 forceUpdateSearch(true);
             }
         }
-
-        log.info("[GEFDBG/Recent] removeRecentlyViewedItem itemId={} removed={} beforeCount={} afterCount={} displayedRecentCount={}",
-                itemId,
-                removed,
-                before,
-                recentItemIds.size(),
-                displayedRecentlyViewedItemIds.size());
     }
 
     private void refreshPinnedResultsIfActive()
@@ -911,7 +843,6 @@ public class RecentItemsSearchFilter extends SearchFilter {
     {
         pinnedItemIds = loadItemIdsFromConfig(PINNED_ITEMS_JSON_KEY);
         trimToMax(pinnedItemIds, getConfiguredPinnedMaxCount());
-        log.info("[GEFDBG/Recent] loadPinnedItems loadedCount={} maxPinned={}", pinnedItemIds.size(), getConfiguredPinnedMaxCount());
     }
 
     private void loadRecentSellOfferItems()

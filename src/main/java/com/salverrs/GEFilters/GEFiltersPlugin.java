@@ -124,19 +124,6 @@ public class GEFiltersPlugin extends Plugin
 	@Subscribe
 	public void onScriptPostFired(ScriptPostFired event)
 	{
-		if (event.getScriptId() == ScriptID.MESSAGE_LAYER_CLOSE
-				|| event.getScriptId() == SEARCH_BOX_LOADED_ID
-				|| event.getScriptId() == ScriptID.CHAT_TEXT_INPUT_REBUILD)
-		{
-			log.info("[GEFDBG/Plugin] onScriptPostFired id={} filtersRunning={} geOpen={} searchVisible={} pendingAutoSelect={} autoSelectApplied={}",
-					event.getScriptId(),
-					filtersRunning,
-					grandExchangeInterfaceOpen,
-					isSearchVisible(),
-					pendingAutoSelectOnBuy,
-					autoSelectAppliedThisSearch);
-		}
-
 		// Chatbox message layer closed (eg. item selected or input cancelled). If we keep widgets around
 		// they can become detached/stale and won't reappear until the GE is re-opened.
 		if (event.getScriptId() == ScriptID.MESSAGE_LAYER_CLOSE)
@@ -189,7 +176,6 @@ public class GEFiltersPlugin extends Plugin
 	{
 		if (event.getGroupId() == InterfaceID.GE_OFFERS)
 		{
-			log.info("[GEFDBG/Plugin] onWidgetLoaded GE_OFFERS");
 			grandExchangeInterfaceOpen = true;
 			autoSelectAppliedThisSearch = false;
 			clientThread.invoke(this::tryStartFilters);
@@ -202,7 +188,6 @@ public class GEFiltersPlugin extends Plugin
 	{
 		if (event.getGroupId() == InterfaceID.GE_OFFERS)
 		{
-			log.info("[GEFDBG/Plugin] onWidgetClosed GE_OFFERS");
 			grandExchangeInterfaceOpen = false;
 			autoSelectAppliedThisSearch = false;
 			clientThread.invoke(this::hideFilters);
@@ -223,11 +208,6 @@ public class GEFiltersPlugin extends Plugin
 	{
 		if (!GEFiltersPlugin.CONFIG_GROUP.equals(configChanged.getGroup()))
 			return;
-
-		log.info("[GEFDBG/Plugin] onConfigChanged key={} oldValue={} newValue={}",
-				configChanged.getKey(),
-				configChanged.getOldValue(),
-				configChanged.getNewValue());
 
 		if (CONFIG_KEY_CLEAR_RECENTLY_VIEWED.equals(configChanged.getKey()))
 		{
@@ -267,14 +247,6 @@ public class GEFiltersPlugin extends Plugin
 
 	private void loadFilters()
 	{
-		log.info("[GEFDBG/Plugin] loadFilters begin cfg: bankTags={} invSetups={} inventory={} bankHighlighter={} recent={} pinned={}",
-				config.enableBankTagFilter(),
-				config.enableInventorySetupsFilter(),
-				config.enableInventoryFilter(),
-				config.enableBankHighlighterFilter(),
-				config.enableRecentItemsFilter(),
-				config.enablePinnedItemsFilter());
-
 		filters = new ArrayList<>();
 
 		if (config.enableBankTagFilter() && isPluginEnabled(BANK_TAGS_COMP_NAME))
@@ -307,58 +279,40 @@ public class GEFiltersPlugin extends Plugin
 			filters.add(pinnedItemsSearchFilter);
 		}
 
-		log.info("[GEFDBG/Plugin] loadFilters selected count={} filters={}", filters.size(), describeFilters(filters));
-
 		registerFilterEvents();
 	}
 
 	private void tryStartFilters()
 	{
-		log.info("[GEFDBG/Plugin] tryStartFilters begin filtersRunning={} geOpen={} searchVisible={} filtersCount={} filters={}",
-				filtersRunning,
-				grandExchangeInterfaceOpen,
-				isSearchVisible(),
-				filters != null ? filters.size() : 0,
-				describeFilters(filters));
-
 		// If the plugin is enabled while the GE is already open we may not receive WidgetLoaded.
 		// Infer state from the presence of the GE root widget.
 		if (!grandExchangeInterfaceOpen && client.getWidget(InterfaceID.GE_OFFERS, 0) != null)
 		{
 			grandExchangeInterfaceOpen = true;
-			log.info("[GEFDBG/Plugin] tryStartFilters inferred geOpen=true from widget presence");
 		}
 
 		// The GE search chatbox can be reused by other interfaces.
 		// Only initialize filters while the GE offers interface is open.
 		if (!grandExchangeInterfaceOpen)
 		{
-			log.info("[GEFDBG/Plugin] tryStartFilters skipped: ge interface not open");
 			return;
 		}
 
 		// If something went wrong with teardown (missed close event), don't get stuck forever.
 		if (filtersRunning && !isSearchVisible())
 		{
-			log.info("[GEFDBG/Plugin] tryStartFilters forcing hide: filtersRunning while search not visible");
 			hideFilters();
 			return;
 		}
 
 		if (filtersRunning)
 		{
-			log.info("[GEFDBG/Plugin] tryStartFilters skipped: already running");
 			return;
 		}
 
 		if (isSearchVisible())
 		{
-			log.info("[GEFDBG/Plugin] tryStartFilters starting filters");
 			startFilters();
-		}
-		else
-		{
-			log.info("[GEFDBG/Plugin] tryStartFilters skipped: search not visible");
 		}
 	}
 
@@ -472,7 +426,6 @@ public class GEFiltersPlugin extends Plugin
 	{
 		if (filters == null || filters.isEmpty())
 		{
-			log.info("[GEFDBG/Plugin] startFilters aborted: no filters loaded");
 			filtersRunning = false;
 			pendingAutoSelectOnBuy = false;
 			autoSelectAppliedThisSearch = false;
@@ -515,21 +468,11 @@ public class GEFiltersPlugin extends Plugin
 			}
 
 			final SearchFilter filter = filters.get(i);
-			log.info("[GEFDBG/Plugin] startFilters starting {} at xOffset={} index={} bothSides={}",
-					filter != null ? filter.getClass().getSimpleName() : "<null>",
-					xOffset,
-					i,
-					bothSides);
 			if (filter != null)
 			{
 				filter.start(xOffset, 0);
 			}
 		}
-
-		log.info("[GEFDBG/Plugin] startFilters complete filtersRunning={} pendingAutoSelect={} autoSelectApplied={}",
-				filtersRunning,
-				pendingAutoSelectOnBuy,
-				autoSelectAppliedThisSearch);
 
 		if (pendingAutoSelectOnBuy)
 		{
@@ -541,15 +484,11 @@ public class GEFiltersPlugin extends Plugin
 
 	private void stopFilters()
 	{
-		log.info("[GEFDBG/Plugin] stopFilters begin filtersCount={} filters={}",
-				filters != null ? filters.size() : 0,
-				describeFilters(filters));
 		filtersRunning = false;
 		pendingAutoSelectOnBuy = false;
 		autoSelectAppliedThisSearch = false;
 		hideFilters();
 		unregisterFilterEvents();
-		log.info("[GEFDBG/Plugin] stopFilters complete");
 	}
 
 	/**
@@ -560,9 +499,6 @@ public class GEFiltersPlugin extends Plugin
 	 */
 	private void hideFilters()
 	{
-		log.info("[GEFDBG/Plugin] hideFilters begin filtersCount={} filters={}",
-				filters != null ? filters.size() : 0,
-				describeFilters(filters));
 		filtersRunning = false;
 		pendingAutoSelectOnBuy = false;
 		autoSelectAppliedThisSearch = false;
@@ -576,19 +512,15 @@ public class GEFiltersPlugin extends Plugin
 		{
 			if (filter != null)
 			{
-				log.info("[GEFDBG/Plugin] hideFilters stopping {}", filter.getClass().getSimpleName());
 				filter.stop();
 			}
 		}
-
-		log.info("[GEFDBG/Plugin] hideFilters complete");
 	}
 
 	private void registerFilterEvents()
 	{
 		if (filters == null || filters.isEmpty())
 		{
-			log.info("[GEFDBG/Plugin] registerFilterEvents skipped: no filters");
 			return;
 		}
 
@@ -599,7 +531,6 @@ public class GEFiltersPlugin extends Plugin
 				continue;
 			}
 
-			log.info("[GEFDBG/Plugin] registerFilterEvents {}", filter.getClass().getSimpleName());
 			eventBus.register(filter);
 		}
 	}
@@ -608,7 +539,6 @@ public class GEFiltersPlugin extends Plugin
 	{
 		if (filters == null || filters.isEmpty())
 		{
-			log.info("[GEFDBG/Plugin] unregisterFilterEvents skipped: no filters");
 			return;
 		}
 
@@ -619,25 +549,8 @@ public class GEFiltersPlugin extends Plugin
 				continue;
 			}
 
-			log.info("[GEFDBG/Plugin] unregisterFilterEvents {}", filter.getClass().getSimpleName());
 			eventBus.unregister(filter);
 		}
-	}
-
-	private String describeFilters(List<SearchFilter> filterList)
-	{
-		if (filterList == null || filterList.isEmpty())
-		{
-			return "[]";
-		}
-
-		final List<String> names = new ArrayList<>();
-		for (SearchFilter filter : filterList)
-		{
-			names.add(filter == null ? "<null>" : filter.getClass().getSimpleName());
-		}
-
-		return names.toString();
 	}
 
 	private boolean isPluginEnabled(String pluginName)

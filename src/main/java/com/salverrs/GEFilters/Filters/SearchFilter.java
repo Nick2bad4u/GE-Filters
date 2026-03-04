@@ -94,13 +94,11 @@ public abstract class SearchFilter
     {
         if (isChatInputHidden())
         {
-            log.info("[GEFDBG/SearchFilter] {} start skipped: chat input hidden", getClass().getSimpleName());
             return;
         }
 
         if (!ready)
         {
-            log.info("[GEFDBG/SearchFilter] {} initialising", getClass().getSimpleName());
             onFilterInitialising();
         }
 
@@ -109,19 +107,16 @@ public abstract class SearchFilter
         checkQuestHelperState();
         if (!createWidgets(xOffset, yOffset))
         {
-            log.info("[GEFDBG/SearchFilter] {} start aborted: createWidgets failed (xOffset={}, yOffset={})", getClass().getSimpleName(), xOffset, yOffset);
             return;
         }
         refreshFilterMenuOptions(false);
         handleReactivation();
 
         ready = true;
-        log.info("[GEFDBG/SearchFilter] {} start complete (xOffset={}, yOffset={}, filterEnabled={})", getClass().getSimpleName(), xOffset, yOffset, filterEnabled);
     }
 
     public void stop()
     {
-        log.info("[GEFDBG/SearchFilter] {} stop called (ready={}, filterEnabled={})", getClass().getSimpleName(), ready, filterEnabled);
         container = null;
         trySetHidden(titleWidget, true);
         trySetHidden(iconWidget, true);
@@ -141,7 +136,6 @@ public abstract class SearchFilter
         // This allows the plugin to keep subscribers registered without causing stale widgets
         // or consuming events in other interfaces which reuse the GE chatbox search.
         ready = false;
-        log.info("[GEFDBG/SearchFilter] {} stop complete (ready={}, filterEnabled={})", getClass().getSimpleName(), ready, filterEnabled);
     }
 
     @Subscribe
@@ -438,17 +432,8 @@ public abstract class SearchFilter
 
         if (option == null)
         {
-            log.info("[GEFDBG/SearchFilter] {} enableFilter skipped: option null", getClass().getSimpleName());
             return;
         }
-
-        log.info("[GEFDBG/SearchFilter] {} enableFilter option='{}' search='{}' silent={} clearData={} wasEnabled={}",
-                getClass().getSimpleName(),
-                option.getTitle(),
-                option.getSearchValue(),
-                silent,
-                clearData,
-                filterEnabled);
 
         final boolean wasEnabled = filterEnabled;
         filterEnabled = true;
@@ -481,11 +466,6 @@ public abstract class SearchFilter
         if (!ready || !filterEnabled)
             return;
 
-        log.info("[GEFDBG/SearchFilter] {} disableFilter clearSearch={} enabledFilterCountBefore={}",
-                getClass().getSimpleName(),
-                clearSearch,
-                enabledFilterCount);
-
         filterEnabled = false;
         if (activeFilter == this)
         {
@@ -511,10 +491,6 @@ public abstract class SearchFilter
             client.setVarcIntValue(VarClientID.MESLAYERMODE, GE_SEARCH_MODE);
             forceUpdateSearch(false);
         }
-
-        log.info("[GEFDBG/SearchFilter] {} disableFilter complete enabledFilterCountAfter={}",
-                getClass().getSimpleName(),
-                enabledFilterCount);
     }
 
     private void handleReactivation()
@@ -662,7 +638,6 @@ public abstract class SearchFilter
         container = client.getWidget(WIDGET_ID_CHATBOX_CONTAINER);
         if (container == null)
         {
-            log.info("[GEFDBG/SearchFilter] {} createWidgets failed: container null", getClass().getSimpleName());
             return false;
         }
 
@@ -678,13 +653,6 @@ public abstract class SearchFilter
                 iconSpriteId,
                 iconSize, iconSize,
                 iconX, iconY);
-
-        log.info("[GEFDBG/SearchFilter] {} createWidgets success (buttonWidth={}, iconSize={}, iconX={}, iconY={})",
-            getClass().getSimpleName(),
-            buttonWidth,
-            iconSize,
-            iconX,
-            iconY);
 
         return true;
     }

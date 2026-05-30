@@ -122,3 +122,6 @@ nbproject/
 #Ignore vscode AI rules
 .github/copilot-instructions.md
 .github/instructions/
+# Ignore generated doc coverage badges
+docs/docusaurus/static/img/coverage.json
+docs/docusaurus/static/img/coverage.svg

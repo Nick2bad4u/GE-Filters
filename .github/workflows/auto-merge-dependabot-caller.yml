@@ -3,7 +3,7 @@ name: Dependabot Auto-Merge
 on:
     pull_request:
         branches:
-            - main
+            - master
         types:
             - opened
             - synchronize
@@ -11,7 +11,7 @@ on:
             - ready_for_review
     merge_group:
         branches:
-            - main
+            - master
         types:
             - checks_requested
 
